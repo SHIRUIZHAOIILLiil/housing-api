@@ -3,6 +3,7 @@ import os
 
 class Config:
     DEBUG = True
+    BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
     SECRET_KEY = "development key"
     HOST = os.getenv('HOST')
     PORT = int(os.getenv("FLASK_PORT"))
@@ -15,3 +16,4 @@ class Config:
             'pp-complete-2024.csv',
             'pp-complete-2025.csv',
             'priceindexofprivaterentsukmonthlypricestatistics.xlsx']
+    DATABASE = os.path.join(BASE_DIR, "data", "housing.db")
