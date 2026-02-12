@@ -18,6 +18,51 @@ median prices, and affordability indicators.
 ## 5. Setup & Installation
 ## 6. Running the Project
 ## 7. API Documentation
+### 7.1 Areas
+- GET /areas
+  - Purpose: List all areas (Supports ?q= fuzzy search)
+  - Responses
+    - 200 OK – returns list
+    - 400 Bad Request – invalid query param
+- GET /areas/{area_code}
+  - Purpose: Search a single area by area code
+  - Responses
+    - 200 OK – returns single area object
+    - 400 Bad Request – invalid query param
+<!--- POST /areas
+  - Purpose: Create an area
+  - Responses
+    - 201 Created – successfully created 
+    - 400 Bad Request – invalid input 
+    - 409 Conflict – area_code already exists
+- PUT /areas/{area_code}
+  - Purpose: Update area name
+  - Responses
+    - 200 OK – successfully updated 
+    - 400 Bad Request – invalid data 
+    - 404 Not Found – area not found
+- DELETE /areas/{area_code}
+  - Purpose: Delete area (If postcode_map/rent_stats is a dependency, a 409 error may occur).
+  - Responses
+    - 204 No Content – successfully deleted 
+    - 404 Not Found – area not found 
+    - 409 Conflict – area has dependent records-->
+### 7.2 POST
+- GET /postcodes/{postcode}
+  - Purpose: Find which area an individual postcode belongs to.
+  - Responses 
+    - 200 OK – returns mapping 
+    - 404 Not Found – postcode not found 
+    - 400 Bad Request – invalid postcode format (optional)
+- GET /areas/{area_code}/postcodes 
+  - Purpose: List all postcodes within a specific area.
+  - Responses 
+    - 200 OK – returns list (possibly empty)
+    - 404 Not Found – area not found
+- GET /postcodes 
+  - Purpose: Search postcodes (useful for fuzzy search / prefix search)
+  - Responses 
+    - 200 OK – returns list
 ## 8. Example Usage
 ## 9. Data Sources
 - Housing Price: Statistical data set Price Paid Data
