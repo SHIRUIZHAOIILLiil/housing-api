@@ -144,8 +144,7 @@ def init_schema(conn: sqlite3.Connection):
                            KEY
                        (
                            time_period,
-                           area_code,
-                           region_or_country_name
+                           area_code
                        ),
                            FOREIGN KEY
                        (
