@@ -1,6 +1,6 @@
 import os, sqlite3, re
 import pandas as pd
-from app import Config
+from app.core.config import Settings
 
 column_name = ["transaction_uuid",
                "price",
@@ -52,10 +52,10 @@ def norm_postcode(x):
     return re.sub(r"\s+", "", str(x).strip().upper())
 
 
-def file_loader(config: Config):
+def file_loader(settings: Settings):
     filepath = []
-    base_path = config.DATAPATH
-    filenames = config.NAME
+    base_path = settings.DATAPATH
+    filenames = settings.NAME
     for filename in filenames:
         filepath.append(os.path.join(base_path, filename))
     return filepath
@@ -98,7 +98,7 @@ def init_schema(conn: sqlite3.Connection):
                        CREATE INDEX IF NOT EXISTS idx_postcode_map_area_code
                            ON postcode_map(area_code);
 
-                       CREATE TABLE IF NOT EXISTS rent_stats
+                       CREATE TABLE IF NOT EXISTS rent_stats_official
                        (
                            time_period
                            TEXT
@@ -159,7 +159,7 @@ def init_schema(conn: sqlite3.Connection):
                            );
 
 
-                       CREATE TABLE IF NOT EXISTS sales_transactions
+                       CREATE TABLE IF NOT EXISTS sales_transactions_official
                        (
                            transaction_uuid
                            TEXT
@@ -242,9 +242,80 @@ def init_schema(conn: sqlite3.Connection):
                        );
 
                        CREATE INDEX IF NOT EXISTS idx_sales_fk_rejects_reason ON sales_fk_rejects(reason);
-
+                           
+                CREATE TABLE IF NOT EXISTS rent_stats_user
+                           (
+                               id INTEGER PRIMARY KEY AUTOINCREMENT,
+                               postcode TEXT,
+                               area_code TEXT,
+                               time_period TEXT NOT NULL,
+                               rent REAL NOT NULL,
+                               bedrooms INTEGER,
+                               property_type TEXT,
+                               created_at TEXT,
+                               source TEXT DEFAULT 'user',
+                               FOREIGN KEY
+                       (
+                           postcode
+                       )
+                           REFERENCES postcode_map
+                       (
+                           postcode
+                       )
+                           ON UPDATE CASCADE
+                           ON DELETE RESTRICT,
+                    
+                    FOREIGN KEY
+                       (
+                           area_code
+                       )
+                           REFERENCES areas
+                       (
+                           area_code
+                       )
+                           ON UPDATE CASCADE
+                           ON DELETE RESTRICT
+                
+                );
+                CREATE TABLE IF NOT EXISTS sales_transactions_user
+                           (
+                               id INTEGER PRIMARY KEY AUTOINCREMENT,
+                               postcode TEXT,
+                               area_code TEXT,
+                               time_period TEXT NOT NULL,
+                               price REAL NOT NULL,
+                               property_type TEXT,
+                               created_at TEXT,
+                               source TEXT DEFAULT 'user',
+                               FOREIGN KEY
+                                                      (
+                           postcode
+                       )
+                           REFERENCES postcode_map
+                       (
+                           postcode
+                       )
+                           ON UPDATE CASCADE
+                           ON DELETE RESTRICT,
+                    
+                    FOREIGN KEY
+                       (
+                           area_code
+                       )
+                           REFERENCES areas
+                       (
+                           area_code
+                       )
+                           ON UPDATE CASCADE
+                           ON DELETE RESTRICT
+                
+                               
+                
+                );
 
                        """)
+
+
 
     conn.commit()
 
@@ -289,7 +360,7 @@ def update_area_name(filepath: list, conn: sqlite3.Connection):
 
 def generate_rent_table(filepath: list, conn: sqlite3.Connection):
     sql_rent = """
-                INSERT OR REPLACE INTO rent_stats
+                INSERT OR REPLACE INTO rent_stats_official
                 (time_period, area_code, region_or_country_name, index_value, annual_change,
                 rental_price, index_one_bed, rental_price_one_bed, index_two_bed, rental_price_two_bed,
                 index_three_bed, rental_price_three_bed, rental_price_detached,
@@ -318,7 +389,7 @@ def generate_rent_table(filepath: list, conn: sqlite3.Connection):
 
 def generate_hmlr_table(filepath: list, conn: sqlite3.Connection):
     sql_hmlr = """
-                INSERT OR REPLACE INTO sales_transactions
+                INSERT OR REPLACE INTO sales_transactions_official
                 (transaction_uuid, price, transaction_date, postcode, property_type, new_build, tenure,
                 paon, saon)VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                """
@@ -382,12 +453,12 @@ def generate_hmlr_table(filepath: list, conn: sqlite3.Connection):
 
 
 if __name__ == '__main__':
-    config = Config()
-    filepaths = file_loader(config)
+    settings = Settings()
+    filepaths = file_loader(settings)
 
-    db_dir = os.path.dirname(config.DATABASE)
+    db_dir = os.path.dirname(settings.DATABASE)
     os.makedirs(db_dir, exist_ok=True)
-    conn = sqlite3.connect(config.DATABASE)
+    conn = sqlite3.connect(settings.DATABASE)
 
     conn.execute("PRAGMA foreign_keys = ON;")
     conn.execute("PRAGMA journal_mode = WAL;")

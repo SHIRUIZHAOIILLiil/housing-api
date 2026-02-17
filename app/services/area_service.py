@@ -1,0 +1,40 @@
+import sqlite3
+from typing import Optional
+
+def list_areas(conn: sqlite3.Connection, q: Optional[str], limit: int):
+    if q:
+        rows = conn.execute(
+            """
+            SELECT area_code, area_name
+            FROM areas
+            WHERE area_name LIKE ?
+            ORDER BY area_name
+            LIMIT ?
+            """,
+            (f"%{q}%", limit),
+        ).fetchall()
+    else:
+        rows = conn.execute(
+            """
+            SELECT area_code, area_name
+            FROM areas
+            ORDER BY area_name
+            LIMIT ?
+            """,
+            (limit,),
+        ).fetchall()
+
+    return [dict(r) for r in rows]
+
+
+def get_area(conn: sqlite3.Connection, area_code: str):
+    row = conn.execute(
+        """
+        SELECT area_code, area_name
+        FROM areas
+        WHERE area_code = ?
+        """,
+        (area_code,),
+    ).fetchone()
+
+    return dict(row) if row else None
