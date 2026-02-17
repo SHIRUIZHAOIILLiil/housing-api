@@ -335,8 +335,17 @@ def generate_hmlr_table(filepath: list, conn: sqlite3.Connection):
             df_hmlr = pd.read_csv(f, usecols=usecols, header=None)
             df_hmlr.columns = column_name
 
+            df_hmlr["transaction_uuid"] = (
+                df_hmlr["transaction_uuid"]
+                .astype(str)
+                .str.strip("{}")
+                .str.lower()
+            )
+
             df_hmlr["postcode"] = df_hmlr["postcode"].map(norm_postcode)
             df_hmlr = df_hmlr.dropna(subset=["postcode"])
+
+
 
             bad_mask = ~df_hmlr["postcode"].isin(valid_pc)
 
