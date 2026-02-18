@@ -63,7 +63,7 @@ median prices, and affordability indicators.
   - Purpose: Search postcodes (useful for fuzzy search / prefix search)
   - Responses 
     - 200 OK – returns list
-### 7.3 Rent Stats
+### 7.3 Official Rent Stats
   - GET /rent-stats
     - Purpose: Retrieve rent statistics for a given area and time period.
     - Query params (required):
@@ -108,6 +108,97 @@ median prices, and affordability indicators.
   - Responses:
     - 200 OK – returns list (possibly empty)
     - 404 Not Found – postcode not found
+### 7.5 User Rent Stats
+- POST /rental-records 
+  - Purpose: Create a new user-contributed rental record.
+  - Responses:
+    - 201 Created – successfully created
+    - 400 Bad Request – invalid input (e.g. wrong time format)
+    - 404 Not Found – area_code or postcode not found
+- GET /rental-records/{id}
+  - Purpose: Retrieve a specific rental record by ID.
+  - Responses:
+    - 200 OK – returns rental record
+    - 404 Not Found – record not found
+- GET /rental-records
+  - Purpose: List user rental records (supports filtering by business time).
+  - Responses:
+    - 200 OK – returns list (possibly empty)
+- PUT /rental-records/{id}
+  - Purpose: Update a rental record.
+  - Responses:
+    - 200 OK – successfully updated
+    - 400 Bad Request – invalid data
+    - 404 Not Found – record not found
+- DELETE /rental-records/{id}
+  - Purpose: Delete a rental record.
+  - Responses:
+    - 204 No Content – successfully deleted
+    - 404 Not Found – record not found
+### 7.6 Rent Statistics
+- GET /rent-stats
+  - Purpose: Retrieve aggregated rent statistics for a given area and time period.
+  - Responses:
+    - 200 OK – returns statistics object
+    - 404 Not Found – no data available
+    - 400 Bad Request – missing or invalid parameters
+- GET /areas/{area_code}/rent-stats
+  - Purpose: Retrieve rent statistics time-series for a specific area.
+  - Responses:
+    - 200 OK – returns list (possibly empty)
+    - 404 Not Found – area not found (optional)
+- GET /areas/{area_code}/rent-stats
+  - Purpose: Retrieve rent statistics time-series for a specific area.
+  - Responses:
+    - 200 OK – returns list (possibly empty)
+    - 404 Not Found – area not found (optional)
+### 7.7 User sales-transaction
+- POST /user-sales-transactions
+  - Purpose: Create a new user-contributed sales transaction record.
+  - Request Body (JSON):
+    - postcode (string, optional)
+    - area_code (string, optional)
+    - time_period (string, required, format YYYY-MM)
+    - price (number, required)
+    - property_type (string, optional, e.g. F, D, S, T)
+    - tenure (string, optional)
+    - new_build (boolean or string, optional)
+  - Responses:
+    - 201 Created – successfully created
+    - 400 Bad Request – invalid input (e.g. wrong time format)
+    - 404 Not Found – postcode or area_code not found
+- GET /user-sales-transactions/{id}
+  - Purpose: Retrieve a specific user sales transaction by ID.
+  - Responses:
+    - 200 OK – returns transaction object
+    - 404 Not Found – transaction not found
+- GET /user-sales-transactions
+  - Purpose: List user sales transactions (supports filtering by business time).
+  - Query Parameters (optional):
+    - area_code
+    - postcode
+    - from (YYYY-MM)
+    - to (YYYY-MM)
+    - property_type
+    - min_price
+    - max_price
+    - page
+    - page_size
+  - Responses:
+    - 200 OK – returns list (possibly empty)
+- PUT /user-sales-transactions/{id}
+  - Purpose: Update a user sales transaction record.
+  - Request Body (JSON):
+    - Any updatable fields (e.g. price, property_type, tenure, etc.)
+  - Responses:
+    - 200 OK – successfully updated
+    - 400 Bad Request – invalid data
+    - 404 Not Found – transaction not found
+- DELETE /user-sales-transactions/{id}
+  - Purpose: Delete a user sales transaction record.
+  - Responses:
+    - 204 No Content – successfully deleted
+    - 404 Not Found – transaction not found
 ## 8. Example Usage
 ## 9. Data Sources
 - Housing Price: Statistical data set Price Paid Data
@@ -124,4 +215,4 @@ Shirui Zhao
 
 University of Leeds
 
-COMP Web Services and Web Data
+COMP3011 Web Services and Web Data
