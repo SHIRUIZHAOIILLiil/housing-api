@@ -1,1 +1,3 @@
-from .area_service import list_areas, get_area
+from .service_area import list_areas, get_area, area_exists
+from .service_postcode_map import get_postcode_map, get_postcode_fuzzy_query, get_postcode_map_by_area_code
+from .service_rent_official import get_rent_stats_official_latest, get_rent_stats_official_series, get_rent_stats_official_one

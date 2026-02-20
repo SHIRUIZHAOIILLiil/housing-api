@@ -2,8 +2,8 @@ import sqlite3
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.api.deps import get_conn
-from app.services.area_service import list_areas, get_area
-from app.services.postcode_map_service import get_postcode_map_by_area_code
+from app.services.service_area import list_areas, get_area
+from app.services.service_postcode_map import get_postcode_map_by_area_code
 from app.schemas.areas import AreaOut
 from app.schemas.postcode import PostcodeOut
 

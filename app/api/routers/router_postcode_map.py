@@ -2,7 +2,7 @@ import sqlite3
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.api.deps import get_conn
-from app.services.postcode_map_service import get_postcode_map, get_postcode_fuzzy_query
+from app.services.service_postcode_map import get_postcode_map, get_postcode_fuzzy_query
 from app.schemas.postcode import PostcodeOut
 
 router = APIRouter()

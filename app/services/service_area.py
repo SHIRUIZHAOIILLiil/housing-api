@@ -38,3 +38,12 @@ def get_area(conn: sqlite3.Connection, area_code: str):
     ).fetchone()
 
     return dict(row) if row else None
+
+def area_exists(conn: sqlite3.Connection, area_code: str):
+    row = conn.execute(
+        """
+        SELECT area_code FROM areas WHERE area_code = ?
+        """,
+        (area_code,),
+    ).fetchone()
+    return row is not None
