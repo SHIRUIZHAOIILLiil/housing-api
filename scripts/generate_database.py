@@ -157,6 +157,7 @@ def init_schema(conn: sqlite3.Connection):
                            ON UPDATE CASCADE
                            ON DELETE RESTRICT
                            );
+                    CREATE INDEX IF NOT EXISTS idx_rent_area_time ON rent_stats_official(area_code, time_period);
 
 
                        CREATE TABLE IF NOT EXISTS sales_transactions_official
@@ -253,7 +254,7 @@ def init_schema(conn: sqlite3.Connection):
                                bedrooms INTEGER,
                                property_type TEXT,
                                created_at TEXT,
-                               source TEXT DEFAULT 'user',
+                               source TEXT DEFAULT 'user' CHECK (source IN ('user','survey','partner')),
                                FOREIGN KEY
                        (
                            postcode
@@ -286,7 +287,7 @@ def init_schema(conn: sqlite3.Connection):
                                price REAL NOT NULL,
                                property_type TEXT,
                                created_at TEXT,
-                               source TEXT DEFAULT 'user',
+                               source TEXT DEFAULT 'user' CHECK (source IN ('user','survey','partner')),,
                                FOREIGN KEY
                                                       (
                            postcode
@@ -312,6 +313,10 @@ def init_schema(conn: sqlite3.Connection):
                                
                 
                 );
+                           CREATE INDEX IF NOT EXISTS idx_sales_postcode ON sales_transactions_official(postcode);
+                           CREATE INDEX IF NOT EXISTS idx_sales_date ON sales_transactions_official(transaction_date);
+
+
 
                        """)
 
