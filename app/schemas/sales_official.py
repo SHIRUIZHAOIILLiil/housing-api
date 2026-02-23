@@ -1,3 +1,4 @@
+import re
 from datetime import date
 from typing import Literal, Optional, TypeVar, Generic, List
 from pydantic import BaseModel, Field, ConfigDict
@@ -11,6 +12,8 @@ SortBy = Literal["transaction_date", "price"]
 SortOrder = Literal["asc", "desc"]
 
 T = TypeVar("T")
+
+YYYY_MM_RE = re.compile(r"^\d{4}-(0[1-9]|1[0-2])$")
 
 class Links(BaseModel):
     self: str = Field(..., examples=["/official/sales-transactions/44F406B7-3032-1095-E063-4704A8C048D4"])
@@ -78,3 +81,70 @@ class PagedResponse(BaseModel, Generic[T]):
     items: List[T]
     meta: PageMeta
     links: Optional[PageLinks] = None
+
+class SalesStatsOut(BaseModel):
+    area_code: str
+    time_period: str = Field(..., description="YYYY-MM")
+
+    count: int
+    avg_price: Optional[float] = None
+    min_price: Optional[float] = None
+    max_price: Optional[float] = None
+    total_value: Optional[float] = None  # SUM(price)
+
+    # Echoing the filter back allows the client to understand "under what conditions it was calculated".
+    property_type: Optional[PropertyType] = None
+    new_build: Optional[NewBuildFlag] = None
+    tenure: Optional[TenureType] = None
+
+
+class SalesStatsSeriesPoint(BaseModel):
+    time_period: str
+    count: int
+    avg_price: Optional[float] = None
+    min_price: Optional[float] = None
+    max_price: Optional[float] = None
+    total_value: Optional[float] = None
+
+
+class SalesStatsSeriesOut(BaseModel):
+    area_code: str
+    items: List[SalesStatsSeriesPoint]
+
+
+class SalesStatsAvailabilityOut(BaseModel):
+    area_code: str
+    min_time_period: Optional[str] = None
+    max_time_period: Optional[str] = None
+    months: int = 0
+
+class SalesStatsPointQuery(BaseModel):
+    min_price: Optional[float] = Field(None, ge=0)
+    max_price: Optional[float] = Field(None, ge=0)
+    property_type: Optional[PropertyType] = None
+    new_build: Optional[NewBuildFlag] = None
+    tenure: Optional[TenureType] = None
+
+
+class SalesStatsSeriesQuery(BaseModel):
+    """
+        Filters for stats: Reuse the core of transaction filters, but use month-level from/to.
+    """
+    from_period: Optional[str] = Field(None, description="YYYY-MM")
+    to_period: Optional[str] = Field(None, description="YYYY-MM")
+
+    min_price: Optional[float] = Field(None, ge=0)
+    max_price: Optional[float] = Field(None, ge=0)
+    property_type: Optional[PropertyType] = None
+    new_build: Optional[NewBuildFlag] = None
+    tenure: Optional[TenureType] = None
+
+    limit: int = Field(240, ge=1, le=500)
+    offset: int = Field(0, ge=0)
+
+class SalesStatsLatestQuery(BaseModel):
+    min_price: Optional[float] = Field(None, ge=0)
+    max_price: Optional[float] = Field(None, ge=0)
+    property_type: Optional[PropertyType] = None
+    new_build: Optional[NewBuildFlag] = None
+    tenure: Optional[TenureType] = None

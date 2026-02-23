@@ -2,15 +2,20 @@
 
 from __future__ import annotations
 
-import sqlite3
+import sqlite3, re
 from typing import Any, Optional
-
 from app.schemas.sales_official import SalesTransactionsQuery
+from app.schemas.errors import BadRequestError, NotFoundError
 
 
 SALES_TABLE = "sales_transactions_official"
 POSTCODE_MAP_TABLE = "postcode_map"
 AREAS_TABLE = "areas"
+
+YYYY_MM_RE = re.compile(r"^\d{4}-(0[1-9]|1[0-2])$")
+def _validate_yyyymm(value: str, field: str) -> None:
+    if not value or not YYYY_MM_RE.match(value):
+        raise BadRequestError(f"Invalid {field}. Expected YYYY-MM.")
 
 def _normalize_new_build(v):
     if v is None:
@@ -34,8 +39,9 @@ def _build_sales_where(filters: SalesTransactionsQuery) -> tuple[str, list[Any]]
 
     # Define as a UUID prefix
     if getattr(filters, "postcode_like", None):
+        q = str(filters.postcode_like).strip().upper().replace(" ", "")
         clauses.append("REPLACE(UPPER(st.postcode), ' ', '') LIKE ?")
-        params.append(f"%{filters.postcode_like}%")
+        params.append(f"%{q}%")
 
     if getattr(filters, "uuid_prefix", None):
         clauses.append("LOWER(st.transaction_uuid) LIKE ?")
@@ -85,6 +91,39 @@ def _build_order_by(filters: SalesTransactionsQuery) -> str:
     col = sort_map.get(filters.sort_by, "st.transaction_date")
     direction = "ASC" if filters.order == "asc" else "DESC"
     return f" ORDER BY {col} {direction} "
+
+def _build_stats_extra_filters(filters) -> tuple[str, list[Any]]:
+    """
+    Additional filters for stats (price/type/new_build/tenure)
+    Returns (" AND ...", params)
+    """
+    clauses: list[str] = []
+    params: list[Any] = []
+
+    if filters.min_price is not None:
+        clauses.append("st.price >= ?")
+        params.append(filters.min_price)
+
+    if filters.max_price is not None:
+        clauses.append("st.price <= ?")
+        params.append(filters.max_price)
+
+    if filters.property_type:
+        clauses.append("st.property_type = ?")
+        params.append(filters.property_type)
+
+    if filters.new_build:
+        clauses.append("st.new_build = ?")
+        params.append(filters.new_build)
+
+    if filters.tenure:
+        clauses.append("st.tenure = ?")
+        params.append(filters.tenure)
+
+    if not clauses:
+        return "", []
+
+    return " AND " + " AND ".join(clauses), params
 
 
 def list_official_sales_transactions(
@@ -165,7 +204,9 @@ def get_official_sales_transaction_by_uuid(
         LIMIT 1
     """
     row = conn.execute(sql, (transaction_uuid,)).fetchone()
-    return _row_to_dict(row) if row else None
+    if not row:
+        raise NotFoundError("Transaction not found")
+    return _row_to_dict(row)
 
 
 def list_official_sales_transactions_by_area(
@@ -186,7 +227,7 @@ def list_official_sales_transactions_by_area(
         (area_code,),
     ).fetchone()
     if not exists:
-        return None
+        raise NotFoundError("Area not found")
 
     where_sql, params = _build_sales_where(filters)
     order_sql = _build_order_by(filters)
@@ -255,7 +296,7 @@ def list_official_sales_transactions_by_postcode(
         (pc_norm,),
     ).fetchone()
     if not exists:
-        return None
+        raise NotFoundError("Postcode not found")
 
     where_sql, params = _build_sales_where(filters)
     order_sql = _build_order_by(filters)
@@ -301,3 +342,168 @@ def list_official_sales_transactions_by_postcode(
     rows = conn.execute(data_sql, params + [filters.limit, filters.offset]).fetchall()
     items = [_row_to_dict(r) for r in rows]
     return items, total
+
+def get_official_sales_stats_point(
+    conn: sqlite3.Connection,
+    area_code: str,
+    time_period: str,
+    filters,
+) -> Optional[dict[str, Any]]:
+    """
+    Point stats: (area_code, time_period) -> aggregated result
+    """
+    conn.row_factory = sqlite3.Row
+
+    exists = conn.execute(
+        f"SELECT 1 FROM areas WHERE area_code = ? LIMIT 1",
+        (area_code,),
+    ).fetchone()
+    _validate_yyyymm(time_period, "time_period")
+
+    if not exists:
+        raise NotFoundError("Area not found")  # router -> 404 area not found
+
+    extra_sql, extra_params = _build_stats_extra_filters(filters)
+
+    sql = f"""
+        SELECT
+            pm.area_code AS area_code,
+            SUBSTR(st.transaction_date, 1, 7) AS time_period,
+            COUNT(*) AS count,
+            AVG(st.price) AS avg_price,
+            MIN(st.price) AS min_price,
+            MAX(st.price) AS max_price,
+            SUM(st.price) AS total_value
+        FROM sales_transactions_official AS st
+        JOIN postcode_map AS pm
+            ON pm.postcode = st.postcode
+        WHERE pm.area_code = ?
+          AND SUBSTR(st.transaction_date, 1, 7) = ?
+          {extra_sql}
+        GROUP BY pm.area_code, SUBSTR(st.transaction_date, 1, 7)
+        LIMIT 1
+    """
+
+    row = conn.execute(sql, [area_code, time_period] + extra_params).fetchone()
+    if not row:
+        raise NotFoundError("No data available")
+    return dict(row)  # {} indicates that the area exists but there is no data for that month.
+
+
+def list_official_sales_stats_series(
+    conn: sqlite3.Connection,
+    area_code: str,
+    filters,
+) -> Optional[tuple[list[dict[str, Any]], Optional[int]]]:
+    """
+    Series stats by month for an area_code.
+    - area not exist -> None
+    - exist -> list (may be empty)
+    """
+    conn.row_factory = sqlite3.Row
+
+    exists = conn.execute(
+        f"SELECT 1 FROM areas WHERE area_code = ? LIMIT 1",
+        (area_code,),
+    ).fetchone()
+    if not exists:
+        return None
+
+    where = ["pm.area_code = ?"]
+    params: list[Any] = [area_code]
+
+    if filters.from_period:
+        where.append("SUBSTR(st.transaction_date, 1, 7) >= ?")
+        params.append(filters.from_period)
+
+    if filters.to_period:
+        where.append("SUBSTR(st.transaction_date, 1, 7) <= ?")
+        params.append(filters.to_period)
+
+    extra_sql, extra_params = _build_stats_extra_filters(filters)
+    params += extra_params
+
+    where_sql = " WHERE " + " AND ".join(where) + extra_sql
+
+    total: Optional[int] = None
+
+    sql = f"""
+        SELECT
+            SUBSTR(st.transaction_date, 1, 7) AS time_period,
+            COUNT(*) AS count,
+            AVG(st.price) AS avg_price,
+            MIN(st.price) AS min_price,
+            MAX(st.price) AS max_price,
+            SUM(st.price) AS total_value
+        FROM sales_transactions_official AS st
+        JOIN postcode_map AS pm
+            ON pm.postcode = st.postcode
+        {where_sql}
+        GROUP BY SUBSTR(st.transaction_date, 1, 7)
+        ORDER BY time_period ASC
+        LIMIT ? OFFSET ?
+    """
+
+    rows = conn.execute(sql, params + [filters.limit, filters.offset]).fetchall()
+    return [dict(r) for r in rows], total
+
+
+def get_official_sales_stats_availability(
+    conn: sqlite3.Connection,
+    area_code: str,
+) -> Optional[dict[str, Any]]:
+    conn.row_factory = sqlite3.Row
+
+    exists = conn.execute(
+        f"SELECT 1 FROM areas WHERE area_code = ? LIMIT 1",
+        (area_code,),
+    ).fetchone()
+    if not exists:
+        return None
+
+    sql = f"""
+        SELECT
+            MIN(SUBSTR(st.transaction_date, 1, 7)) AS min_time_period,
+            MAX(SUBSTR(st.transaction_date, 1, 7)) AS max_time_period,
+            COUNT(DISTINCT SUBSTR(st.transaction_date, 1, 7)) AS months
+        FROM sales_transactions_official AS st
+        JOIN postcode_map AS pm
+            ON pm.postcode = st.postcode
+        WHERE pm.area_code = ?
+    """
+    row = conn.execute(sql, (area_code,)).fetchone()
+    return {"area_code": area_code, **dict(row)}
+
+
+def get_official_sales_stats_latest(
+    conn: sqlite3.Connection,
+    area_code: str,
+    filters,
+) -> Optional[dict[str, Any]]:
+    conn.row_factory = sqlite3.Row
+
+    exists = conn.execute(
+        f"SELECT 1 FROM areas WHERE area_code = ? LIMIT 1",
+        (area_code,),
+    ).fetchone()
+    if not exists:
+        return None
+
+    extra_sql, extra_params = _build_stats_extra_filters(filters)
+
+    # Find the latest month for this area (under filters).
+    sql_latest = f"""
+        SELECT
+            MAX(SUBSTR(st.transaction_date, 1, 7)) AS latest_period
+        FROM sales_transactions_official st
+        JOIN postcode_map AS pm
+            ON pm.postcode = st.postcode
+        WHERE pm.area_code = ?
+        {extra_sql}
+    """
+    row = conn.execute(sql_latest, [area_code] + extra_params).fetchone()
+    latest_period = row["latest_period"] if row else None
+    if not latest_period:
+        raise NotFoundError("No data available")  # The area exists but no transactions have been completed.
+
+    return get_official_sales_stats_point(conn, area_code, latest_period, filters)

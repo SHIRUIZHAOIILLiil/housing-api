@@ -1,5 +1,6 @@
 import sqlite3
 from typing import Optional
+from app.schemas.errors import NotFoundError
 
 def list_areas(conn: sqlite3.Connection, q: Optional[str], limit: int):
     if q:
@@ -7,7 +8,7 @@ def list_areas(conn: sqlite3.Connection, q: Optional[str], limit: int):
             """
             SELECT area_code, area_name
             FROM areas
-            WHERE area_name LIKE ?
+            WHERE area_name LIKE ? COLLATE NOCASE
             ORDER BY area_name
             LIMIT ?
             """,
@@ -36,8 +37,10 @@ def get_area(conn: sqlite3.Connection, area_code: str):
         """,
         (area_code,),
     ).fetchone()
+    if not row:
+        raise NotFoundError("Area not found")
 
-    return dict(row) if row else None
+    return dict(row)
 
 def area_exists(conn: sqlite3.Connection, area_code: str):
     row = conn.execute(

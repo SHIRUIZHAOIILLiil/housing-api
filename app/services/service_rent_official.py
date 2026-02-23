@@ -1,19 +1,40 @@
-import sqlite3, re
-from typing import Optional, List
+import sqlite3, re, io, matplotlib.pyplot as plt
+from typing import Optional, List, Literal
 from app.schemas.rent_stats_official import RentStatsOfficialOut, BedStats, OverallStats, PropertyTypePrices, RentStatsAvailabilityOut
+from app.schemas.errors import BadRequestError, NotFoundError
 
 YYYY_MM_RE = re.compile(r"^\d{4}-(0[1-9]|1[0-2])$")
+
+
+Metric = Literal["rental_price", "index_value", "annual_change"]
+Bedroom = Literal["overall", "1", "2", "3"]
 
 def _bed(index, price) -> Optional[BedStats]:
     if index is None and price is None:
         return None
     return BedStats(index=index, rental_price=price)
 
+def _pick_column(metric: Metric, bedrooms: Bedroom) -> str:
+    if bedrooms == "overall":
+        return metric
+
+    if metric == "annual_change":
+        raise ValueError("annual_change is only available for overall in the official dataset.")
+
+    if bedrooms == "1":
+        return "rental_price_one_bed" if metric == "rental_price" else "index_one_bed"
+    if bedrooms == "2":
+        return "rental_price_two_bed" if metric == "rental_price" else "index_two_bed"
+    if bedrooms == "3":
+        return "rental_price_three_bed" if metric == "rental_price" else "index_three_bed"
+
+    raise ValueError("Invalid bedrooms option.")
+
 def validate_yyyy_mm(value: Optional[str], field_name: str) -> None:
     if value is None:
         return
     if not YYYY_MM_RE.match(value):
-        raise ValueError(f"Invalid {field_name}. Expected format YYYY-MM.")
+        raise BadRequestError(f"Invalid {field_name}. Expected format YYYY-MM.")
 
 
 def row_to_rent_stats_official(row: sqlite3.Row) -> RentStatsOfficialOut:
@@ -69,6 +90,11 @@ def get_rent_stats_official_series(
 
     where = ["area_code = ?"]
     params = [area_code]
+
+    validate_yyyy_mm(from_, "from")
+    validate_yyyy_mm(to, "to")
+    if from_ and to and from_ > to:
+        raise BadRequestError("'from' must be <= 'to'")
 
     if from_:
         where.append("time_period >= ?")
@@ -133,3 +159,67 @@ def get_rent_stats_official_availability(
         max_time_period=row["max_time_period"],
         count=int(row["count"] or 0),
     )
+
+
+def build_rent_trend_png(
+    conn: sqlite3.Connection,
+    area_code: str,
+    from_period: str,
+    to_period: str,
+    metric: Metric = "rental_price",
+    bedrooms: Bedroom = "overall",
+) -> bytes:
+    col = _pick_column(metric, bedrooms)
+
+    rows = conn.execute(
+        f"""
+        SELECT time_period, {col} AS value, region_or_country_name
+        FROM rent_stats_official
+        WHERE area_code = ?
+          AND time_period >= ?
+          AND time_period <= ?
+        ORDER BY time_period ASC
+        """,
+        (area_code, from_period, to_period),
+    ).fetchall()
+
+    if not rows:
+        raise NotFoundError("No data available for the given inputs")
+
+    # Filter out points where the value is NULL (for example, many early versions of annual_change were null).
+    x: List[str] = []
+    y: List[float] = []
+    region_name = rows[0]["region_or_country_name"] if rows[0]["region_or_country_name"] else area_code
+    for r in rows:
+        if r["value"] is None:
+            continue
+        x.append(r["time_period"])
+        y.append(float(r["value"]))
+
+    if not y:
+        raise NotFoundError("No usable data in range")
+
+    # Drawing: Returns PNG bytes
+    fig, ax = plt.subplots(figsize=(10, 5), constrained_layout=True)
+
+    ax.plot(x, y)
+
+    # x-axis scale: Reduce density + rotation
+    step = max(1, len(x) // 12)  # A maximum of approximately 12 tags can be displayed.
+    ax.set_xticks(range(0, len(x), step))
+    ax.set_xticklabels([x[i] for i in range(0, len(x), step)], rotation=45, ha="right")
+
+    ax.set_xlabel("Month")
+    ax.set_ylabel(metric)
+
+    # Title: Shorten and add line breaks to avoid overflow.
+    title_metric = f"{metric} ({'overall' if bedrooms == 'overall' else bedrooms + '-bed'})"
+    ax.set_title(f"Rent trend: {region_name} [{area_code}]\n{title_metric}")
+
+    fig.subplots_adjust(bottom=0.22, top=0.88)
+
+    buf = io.BytesIO()
+    fig.savefig(buf, format="png", dpi=150)
+    plt.close(fig)
+    buf.seek(0)
+    return buf.getvalue()

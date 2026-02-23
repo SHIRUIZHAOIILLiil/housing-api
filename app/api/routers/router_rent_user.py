@@ -1,0 +1,107 @@
+# app/api/routers/router_rent_user.py
+from __future__ import annotations
+
+from fastapi import APIRouter, Depends, Response, status, Query
+import sqlite3
+from typing import Optional
+
+from app.api.deps import get_conn, COMMON_ERROR_RESPONSES
+from app.schemas.schema_rent_user import (
+    RentalRecordCreate,
+    RentalRecordUpdate,
+    RentalRecordOut,
+    RentalRecordListOut,
+    RentalRecordPatch,
+)
+from app.services.service_rent_user import (
+    create_rental_record,
+    get_rental_record,
+    list_rental_records,
+    update_rental_record,
+    delete_rental_record,
+    patch_rental_record
+)
+
+router = APIRouter()
+
+
+@router.post(
+    "",
+    response_model=RentalRecordOut,
+    status_code=status.HTTP_201_CREATED,
+    responses=COMMON_ERROR_RESPONSES
+)
+def api_create_rental_record(payload: RentalRecordCreate, conn: sqlite3.Connection = Depends(get_conn)):
+    return create_rental_record(conn, payload)
+
+
+@router.get(
+    "/{record_id}",
+    response_model=RentalRecordOut,
+    responses=COMMON_ERROR_RESPONSES
+)
+def api_get_rental_record(record_id: int, conn: sqlite3.Connection = Depends(get_conn)):
+    return get_rental_record(conn, record_id)
+
+
+@router.get(
+    "",
+    response_model=RentalRecordListOut,
+    responses=COMMON_ERROR_RESPONSES
+)
+def api_list_rental_records(
+    time_period: Optional[str] = None,
+    area_code: Optional[str] = None,
+    postcode: Optional[str] = None,
+    bedrooms: Optional[int] = None,
+    property_type: Optional[str] = None,
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    conn: sqlite3.Connection = Depends(get_conn),
+):
+    items = list_rental_records(
+        conn,
+        time_period=time_period,
+        area_code=area_code,
+        postcode=postcode,
+        bedrooms=bedrooms,
+        property_type=property_type,
+        limit=limit,
+        offset=offset,
+    )
+    return RentalRecordListOut(items=items)
+
+
+@router.put(
+    "/{record_id}",
+    response_model=RentalRecordOut,
+    responses=COMMON_ERROR_RESPONSES
+)
+def api_update_rental_record(
+    record_id: int,
+    patch: RentalRecordUpdate,
+    conn: sqlite3.Connection = Depends(get_conn),
+):
+    return update_rental_record(conn, record_id, patch)
+
+
+@router.patch(
+    "/{record_id}",
+    response_model=RentalRecordOut,
+    responses=COMMON_ERROR_RESPONSES
+)
+def api_patch_rental_record(
+    record_id: int,
+    patch: RentalRecordPatch,
+    conn: sqlite3.Connection = Depends(get_conn),
+):
+    return patch_rental_record(conn, record_id, patch)
+
+@router.delete(
+    "/{record_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses=COMMON_ERROR_RESPONSES
+)
+def api_delete_rental_record(record_id: int, conn: sqlite3.Connection = Depends(get_conn)):
+    delete_rental_record(conn, record_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

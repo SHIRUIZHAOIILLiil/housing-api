@@ -6,9 +6,14 @@ from app.core.config import Settings
 from app.schemas.sales_official import (
     SalesGlobalFilters, SalesScopedFilters, PropertyType, NewBuildFlag, TenureType, SortBy, SortOrder
 )
-
+from app.schemas.errors import ErrorOut
 
 settings = Settings()
+
+COMMON_ERROR_RESPONSES = {
+    400: {"model": ErrorOut, "description": "Invalid input."},
+    404: {"model": ErrorOut, "description": "Resource not found."},
+}
 
 def get_conn() -> Generator[sqlite3.Connection, None, None]:
     conn = sqlite3.connect(settings.DATABASE)
