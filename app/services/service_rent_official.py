@@ -1,7 +1,9 @@
+import matplotlib
+matplotlib.use("Agg")
 import sqlite3, re, io, matplotlib.pyplot as plt
 from typing import Optional, List, Literal
 from app.schemas.rent_stats_official import RentStatsOfficialOut, BedStats, OverallStats, PropertyTypePrices, RentStatsAvailabilityOut
-from app.schemas.errors import BadRequestError, NotFoundError
+from app.schemas.errors import BadRequestError, NotFoundError, UnprocessableEntityError
 
 YYYY_MM_RE = re.compile(r"^\d{4}-(0[1-9]|1[0-2])$")
 
@@ -19,7 +21,7 @@ def _pick_column(metric: Metric, bedrooms: Bedroom) -> str:
         return metric
 
     if metric == "annual_change":
-        raise ValueError("annual_change is only available for overall in the official dataset.")
+        raise UnprocessableEntityError("annual_change is only available for overall in the official dataset.")
 
     if bedrooms == "1":
         return "rental_price_one_bed" if metric == "rental_price" else "index_one_bed"
@@ -34,7 +36,7 @@ def validate_yyyy_mm(value: Optional[str], field_name: str) -> None:
     if value is None:
         return
     if not YYYY_MM_RE.match(value):
-        raise BadRequestError(f"Invalid {field_name}. Expected format YYYY-MM.")
+        raise UnprocessableEntityError(f"Invalid {field_name}. Expected format YYYY-MM.")
 
 
 def row_to_rent_stats_official(row: sqlite3.Row) -> RentStatsOfficialOut:
@@ -164,12 +166,17 @@ def get_rent_stats_official_availability(
 def build_rent_trend_png(
     conn: sqlite3.Connection,
     area_code: str,
-    from_period: str,
-    to_period: str,
+    from_: str,
+    to: str,
     metric: Metric = "rental_price",
     bedrooms: Bedroom = "overall",
 ) -> bytes:
     col = _pick_column(metric, bedrooms)
+
+    validate_yyyy_mm(from_, "from")
+    validate_yyyy_mm(to, "to")
+    if from_ and to and from_ > to:
+        raise BadRequestError("'from' must be <= 'to'")
 
     rows = conn.execute(
         f"""
@@ -180,7 +187,7 @@ def build_rent_trend_png(
           AND time_period <= ?
         ORDER BY time_period ASC
         """,
-        (area_code, from_period, to_period),
+        (area_code, from_, to),
     ).fetchall()
 
     if not rows:

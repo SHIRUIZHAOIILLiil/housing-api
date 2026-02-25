@@ -13,3 +13,6 @@ class BadRequestError(AppError):
 
 class NotFoundError(AppError):
     status_code = 404
+
+class UnprocessableEntityError(AppError):
+    status_code = 422

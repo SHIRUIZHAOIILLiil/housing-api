@@ -108,24 +108,18 @@ def api_get_rent_stats_availability(
             )
 def api_get_rent_trend_plot(
     area_code: str,
-    from_period: str = "2015-01",
-    to_period: str = "2025-12",
+    from_: Optional[str] = Query(None, alias="from", description="Start time period (YYYY-MM)"),
+    to: Optional[str] = Query(None, description="End time period (YYYY-MM)"),
     metric: Literal["rental_price", "index_value", "annual_change"] = "rental_price",
     bedrooms: Literal["overall", "1", "2", "3"] = "overall",
     conn: sqlite3.Connection = Depends(get_conn),
 ):
-    # 400: validate periods
-    validate_yyyy_mm(from_period, "from_period")
-    validate_yyyy_mm(to_period, "to_period")
-    if from_period > to_period:
-        raise BadRequestError("'from_period' must be <= 'to_period'.")
-
 
     png = build_rent_trend_png(
         conn,
         area_code=area_code,
-        from_period=from_period,
-        to_period=to_period,
+        from_=from_,
+        to=to,
         metric=metric,
         bedrooms=bedrooms,
     )
@@ -136,8 +130,8 @@ def api_get_rent_trend_plot(
             responses={200: {"content": {"image/png": {}}, "description": "PNG image"}, **COMMON_ERROR_RESPONSES,},)
 def api_rent_trend_by_name(
     area: str = Query(..., description="Area name, e.g. Leeds"),
-    from_period: str = "2020-01",
-    to_period: str = "2025-12",
+    from_: Optional[str] = Query(None, alias="from", description="Start time period (YYYY-MM)"),
+    to: Optional[str] = Query(None, description="End time period (YYYY-MM)"),
     metric: Literal["rental_price", "index_value", "annual_change"] = "rental_price",
     bedrooms: Literal["overall", "1", "2", "3"] = "overall",
     conn: sqlite3.Connection = Depends(get_conn),
@@ -161,16 +155,11 @@ def api_rent_trend_by_name(
 
     area_code = rows[0]["area_code"]
 
-    validate_yyyy_mm(from_period, "from_period")
-    validate_yyyy_mm(to_period, "to_period")
-
-    if from_period > to_period:
-        raise BadRequestError("'from_period' must be <= 'to_period'.")
     png = build_rent_trend_png(
         conn,
         area_code=area_code,
-        from_period=from_period,
-        to_period=to_period,
+        from_=from_,
+        to=to,
         metric=metric,
         bedrooms=bedrooms,
     )
