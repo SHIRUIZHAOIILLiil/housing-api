@@ -1,5 +1,5 @@
 import sqlite3
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Query
 
 from app.api.deps import get_conn, COMMON_ERROR_RESPONSES
 from app.services.service_area import list_areas, get_area, area_exists
@@ -8,9 +8,7 @@ from app.schemas.areas import AreaOut
 from app.schemas.postcode import PostcodeOut
 from app.schemas.errors import ErrorOut, NotFoundError
 router = APIRouter()
-RESPONSES_404 = {
-    404: {"model": ErrorOut, "description": "Resource not found."},
-}
+
 @router.get("", response_model=list[AreaOut], responses=COMMON_ERROR_RESPONSES)
 def api_list_areas(
     q: str | None = Query(default=None, description="Fuzzy search by area name"),
