@@ -1,8 +1,5 @@
-from sqlite3 import Connection
-
 import uvicorn
 from fastapi import FastAPI, Request
-from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 from app.core.config import Settings
@@ -15,12 +12,6 @@ def create_app() -> FastAPI:
         version="1.0",
         debug=True,
     )
-
-    @app.exception_handler(RequestValidationError)
-    async def validation_exception_handler(request: Request, exc: RequestValidationError):
-    # Change the FastAPI default 422 to 400 and compress the information into a string (more in line with Class ErrorOut).
-        msg = "; ".join([f"{'.'.join(map(str, e['loc']))}: {e['msg']}" for e in exc.errors()])
-        return JSONResponse(status_code=400, content={"detail": msg})
 
     @app.exception_handler(AppError)
     def app_error_handler(request: Request, exc: AppError):

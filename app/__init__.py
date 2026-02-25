@@ -1,4 +1,3 @@
-from flask import Flask
 # from app.core.config import Settings
 
 
