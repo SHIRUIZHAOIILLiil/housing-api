@@ -2,7 +2,7 @@ import sqlite3
 import pytest
 from fastapi.testclient import TestClient
 
-from app.main import app
+from app.main import create_app
 from app.api.deps import get_conn
 
 def _init_schema(conn: sqlite3.Connection) -> None:
@@ -45,6 +45,7 @@ def _seed_data(conn: sqlite3.Connection) -> None:
             ("LS11AA", "E08000035"),
             ("LS29JT", "E08000035"),
             ("B11AA", "E08000025"),
+            ("AL13BH", "E07000240")
         ],
     )
     conn.commit()
@@ -56,7 +57,8 @@ def db_conn(tmp_path):
         and they do not affect each other.
     """
     db_file = tmp_path / "test.db"
-    conn = sqlite3.connect(db_file)
+    conn = sqlite3.connect(db_file, check_same_thread=False)
+    _init_schema(conn)
     conn.row_factory = sqlite3.Row
 
     _init_schema(conn)
@@ -77,7 +79,7 @@ def client(db_conn):
             yield db_conn
         finally:
             pass
-
+    app = create_app()
     app.dependency_overrides[get_conn] = _override_get_conn
 
     with TestClient(app) as c:
