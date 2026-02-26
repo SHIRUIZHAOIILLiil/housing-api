@@ -425,8 +425,8 @@ def list_official_sales_stats_series(
     """
     conn.row_factory = sqlite3.Row
 
-    if filters.date_from and filters.date_to and filters.date_from > filters.date_to:
-        raise BadRequestError("date_from cannot be after date_to")
+    if filters.from_period and filters.to_period and filters.from_period > filters.to_period:
+        raise BadRequestError("from_period cannot be after to_period")
 
     if filters.min_price is not None and filters.max_price is not None and filters.min_price > filters.max_price:
         raise BadRequestError("min_price cannot be greater than max_price")
@@ -488,7 +488,7 @@ def get_official_sales_stats_availability(
         (area_code,),
     ).fetchone()
     if not exists:
-        return None
+        raise NotFoundError("Area not found")
 
     sql = f"""
         SELECT

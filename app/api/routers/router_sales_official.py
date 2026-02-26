@@ -237,8 +237,8 @@ def api_get_official_sales_stats_series(
     filters: SalesStatsSeriesQuery = Depends(),
     conn: sqlite3.Connection = Depends(get_conn),
 ):
-    items = list_official_sales_stats_series(conn, area_code, filters)
-    return {"area_code": area_code, "items": items}
+    items, total = list_official_sales_stats_series(conn, area_code, filters)
+    return {"area_code": area_code, "items": items, "total": total, "limit": filters.limit, "offset": filters.offset,}
 
 @router.get(
     "/areas/{area_code}/sales-stats/latest",

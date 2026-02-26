@@ -129,8 +129,8 @@ class SalesStatsSeriesQuery(BaseModel):
     """
         Filters for stats: Reuse the core of transaction filters, but use month-level from/to.
     """
-    from_period: Optional[str] = Field(None, description="YYYY-MM")
-    to_period: Optional[str] = Field(None, description="YYYY-MM")
+    from_period: Optional[str] = Field(None, alias="date_from", description="YYYY-MM")
+    to_period: Optional[str] = Field(None, alias="date_to", description="YYYY-MM")
 
     min_price: Optional[float] = Field(None, ge=0)
     max_price: Optional[float] = Field(None, ge=0)
