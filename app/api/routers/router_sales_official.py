@@ -251,6 +251,7 @@ def api_get_official_sales_stats_latest(
     filters: SalesStatsLatestQuery = Depends(),
     conn: sqlite3.Connection = Depends(get_conn),
 ):
+
     result = get_official_sales_stats_latest(conn, area_code, filters)
 
     # echo filters

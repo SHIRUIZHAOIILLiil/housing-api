@@ -436,7 +436,7 @@ def list_official_sales_stats_series(
         (area_code,),
     ).fetchone()
     if not exists:
-        return None
+        raise NotFoundError("Area not found")
 
     where = ["pm.area_code = ?"]
     params: list[Any] = [area_code]
@@ -519,7 +519,7 @@ def get_official_sales_stats_latest(
         (area_code,),
     ).fetchone()
     if not exists:
-        return None
+        raise NotFoundError("Area not found")
 
     extra_sql, extra_params = _build_stats_extra_filters(filters)
 
