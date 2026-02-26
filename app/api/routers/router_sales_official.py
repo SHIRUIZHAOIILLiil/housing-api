@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sqlite3
+from uuid import UUID
 
 from fastapi import APIRouter, Depends
 from app.api.deps import get_sales_global_filters, get_sales_scoped_filters , get_conn, COMMON_ERROR_RESPONSES
@@ -97,14 +98,14 @@ def attach_transaction_links(item: list[dict]) -> None:
     area_code = item.get("area_code")
 
     links = {
-        "self": f"/sales_official/{uuid}",
+        "self": f"/transactions/sales_official/{uuid}",
     }
 
     if postcode:
-        links["postcode"] = f"/sales_official/postcodes/{postcode}"
+        links["postcode"] = f"/postcodes/{postcode}"
 
     if area_code:
-        links["area"] = f"/sales_official/areas/{area_code}"
+        links["area"] = f"/areas/{area_code}"
 
     item["links"] = links
 
@@ -137,21 +138,21 @@ def api_list_official_sales_transactions(
 
 
 @router.get(
-    "/{transaction_uuid}",
+    "/transactions/{transaction_uuid}",
     response_model=OfficialSalesTransactionOut,
     summary="Get a specific sales transaction",
     responses=COMMON_ERROR_RESPONSES
 )
 def api_get_official_sales_transaction(
-    transaction_uuid: str,
+    transaction_uuid: UUID,
     conn: sqlite3.Connection = Depends(get_conn),
 ):
-    item = get_official_sales_transaction_by_uuid(conn, transaction_uuid)  # service will throw NotFoundError
+    item = get_official_sales_transaction_by_uuid(conn, str(transaction_uuid))  # service will throw NotFoundError
     attach_transaction_links(item)
     item["links"] = {
-        "self": f"/official/sales-transactions/{item['transaction_uuid']}",
-        "area": f"/official/areas/{item['area_code']}/sales-transactions" if item.get("area_code") else None,
-        "postcode": f"/official/postcodes/{item['postcode']}/sales-transactions",
+        "self": f"/sales-transactions/transactions/{item['transaction_uuid']}",
+        "area": f"sales-transactions/areas/{item['area_code']}/sales-transactions" if item.get("area_code") else None,
+        "postcode": f"sales-transactions/postcodes/{item['postcode']}/sales-transactions",
     }
     return item
 

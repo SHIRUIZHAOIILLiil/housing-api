@@ -7,15 +7,17 @@ from typing import Any, Optional
 from app.schemas.sales_official import SalesTransactionsQuery
 from app.schemas.errors import BadRequestError, NotFoundError
 
-
 SALES_TABLE = "sales_transactions_official"
 POSTCODE_MAP_TABLE = "postcode_map"
 AREAS_TABLE = "areas"
 
 YYYY_MM_RE = re.compile(r"^\d{4}-(0[1-9]|1[0-2])$")
+
+
 def _validate_yyyymm(value: str, field: str) -> None:
     if not value or not YYYY_MM_RE.match(value):
         raise BadRequestError(f"Invalid {field}. Expected YYYY-MM.")
+
 
 def _normalize_new_build(v):
     if v is None:
@@ -28,6 +30,7 @@ def _row_to_dict(row: sqlite3.Row) -> dict[str, Any]:
     d = dict(row)
     d["new_build"] = _normalize_new_build(d.get("new_build"))
     return d
+
 
 def _build_sales_where(filters: SalesTransactionsQuery) -> tuple[str, list[Any]]:
     """
@@ -80,6 +83,7 @@ def _build_sales_where(filters: SalesTransactionsQuery) -> tuple[str, list[Any]]
 
     return " WHERE " + " AND ".join(clauses), params
 
+
 def _build_order_by(filters: SalesTransactionsQuery) -> str:
     """
         Only allow sorting by whitelisted fields to prevent ORDER BY injection.
@@ -91,6 +95,7 @@ def _build_order_by(filters: SalesTransactionsQuery) -> str:
     col = sort_map.get(filters.sort_by, "st.transaction_date")
     direction = "ASC" if filters.order == "asc" else "DESC"
     return f" ORDER BY {col} {direction} "
+
 
 def _build_stats_extra_filters(filters) -> tuple[str, list[Any]]:
     """
@@ -127,8 +132,8 @@ def _build_stats_extra_filters(filters) -> tuple[str, list[Any]]:
 
 
 def list_official_sales_transactions(
-    conn: sqlite3.Connection,
-    filters: SalesTransactionsQuery,
+        conn: sqlite3.Connection,
+        filters: SalesTransactionsQuery,
 ) -> list[dict[str, Any]]:
     """
     GET /official/sales-transactions
@@ -182,11 +187,11 @@ def list_official_sales_transactions(
 
 
 def get_official_sales_transaction_by_uuid(
-    conn: sqlite3.Connection,
-    transaction_uuid: str,
+        conn: sqlite3.Connection,
+        transaction_uuid: str,
 ) -> Optional[dict[str, Any]]:
     """
-    GET /official/sales-transactions/{transaction_uuid}
+    GET sales-transactions/transactions/{transaction_uuid}
     Returns None if not found
     """
     conn.row_factory = sqlite3.Row
@@ -216,9 +221,9 @@ def get_official_sales_transaction_by_uuid(
 
 
 def list_official_sales_transactions_by_area(
-    conn: sqlite3.Connection,
-    area_code: str,
-    filters: SalesTransactionsQuery,
+        conn: sqlite3.Connection,
+        area_code: str,
+        filters: SalesTransactionsQuery,
 ) -> Optional[list[dict[str, Any]]]:
     """
     GET /official/areas/{area_code}/sales-transactions
@@ -234,7 +239,6 @@ def list_official_sales_transactions_by_area(
     ).fetchone()
     if not exists:
         raise NotFoundError("Area not found")
-
 
     if filters.date_from and filters.date_to and filters.date_from > filters.date_to:
         raise BadRequestError("date_from cannot be after date_to")
@@ -288,14 +292,13 @@ def list_official_sales_transactions_by_area(
     return items, total
 
 
-
 def list_official_sales_transactions_by_postcode(
-    conn: sqlite3.Connection,
-    postcode: str,
-    filters: SalesTransactionsQuery,
+        conn: sqlite3.Connection,
+        postcode: str,
+        filters: SalesTransactionsQuery,
 ) -> Optional[list[dict[str, Any]]]:
     """
-    GET /official/postcodes/{postcode}/sales-transactions
+    GET /postcodes/{postcode}/sales-transactions
     - If postcode does not exist: Returns None (router -> 404)
     - If postcode exists: Returns a list (can be empty)
     """
@@ -311,13 +314,11 @@ def list_official_sales_transactions_by_postcode(
     if not exists:
         raise NotFoundError("Postcode not found")
 
-
     if filters.date_from and filters.date_to and filters.date_from > filters.date_to:
         raise BadRequestError("date_from cannot be after date_to")
 
     if filters.min_price is not None and filters.max_price is not None and filters.min_price > filters.max_price:
         raise BadRequestError("min_price cannot be greater than max_price")
-
 
     where_sql, params = _build_sales_where(filters)
     order_sql = _build_order_by(filters)
@@ -364,11 +365,12 @@ def list_official_sales_transactions_by_postcode(
     items = [_row_to_dict(r) for r in rows]
     return items, total
 
+
 def get_official_sales_stats_point(
-    conn: sqlite3.Connection,
-    area_code: str,
-    time_period: str,
-    filters,
+        conn: sqlite3.Connection,
+        area_code: str,
+        time_period: str,
+        filters,
 ) -> Optional[dict[str, Any]]:
     """
     Point stats: (area_code, time_period) -> aggregated result
@@ -412,9 +414,9 @@ def get_official_sales_stats_point(
 
 
 def list_official_sales_stats_series(
-    conn: sqlite3.Connection,
-    area_code: str,
-    filters,
+        conn: sqlite3.Connection,
+        area_code: str,
+        filters,
 ) -> Optional[tuple[list[dict[str, Any]], Optional[int]]]:
     """
     Series stats by month for an area_code.
@@ -422,6 +424,12 @@ def list_official_sales_stats_series(
     - exist -> list (may be empty)
     """
     conn.row_factory = sqlite3.Row
+
+    if filters.date_from and filters.date_to and filters.date_from > filters.date_to:
+        raise BadRequestError("date_from cannot be after date_to")
+
+    if filters.min_price is not None and filters.max_price is not None and filters.min_price > filters.max_price:
+        raise BadRequestError("min_price cannot be greater than max_price")
 
     exists = conn.execute(
         f"SELECT 1 FROM areas WHERE area_code = ? LIMIT 1",
@@ -470,8 +478,8 @@ def list_official_sales_stats_series(
 
 
 def get_official_sales_stats_availability(
-    conn: sqlite3.Connection,
-    area_code: str,
+        conn: sqlite3.Connection,
+        area_code: str,
 ) -> Optional[dict[str, Any]]:
     conn.row_factory = sqlite3.Row
 
@@ -497,11 +505,14 @@ def get_official_sales_stats_availability(
 
 
 def get_official_sales_stats_latest(
-    conn: sqlite3.Connection,
-    area_code: str,
-    filters,
+        conn: sqlite3.Connection,
+        area_code: str,
+        filters,
 ) -> Optional[dict[str, Any]]:
     conn.row_factory = sqlite3.Row
+
+    if filters.min_price is not None and filters.max_price is not None and filters.min_price > filters.max_price:
+        raise BadRequestError("min_price cannot be greater than max_price")
 
     exists = conn.execute(
         f"SELECT 1 FROM areas WHERE area_code = ? LIMIT 1",
