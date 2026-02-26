@@ -39,7 +39,7 @@ def api_create_user_sale(payload: SalesUserCreate, conn: sqlite3.Connection = De
     responses=COMMON_ERROR_RESPONSES
 )
 def api_get_user_sale(record_id: int, conn: sqlite3.Connection = Depends(get_conn)):
-    get_user_sale(conn, record_id)
+    return get_user_sale(conn, record_id)
 
 
 @router.get(
