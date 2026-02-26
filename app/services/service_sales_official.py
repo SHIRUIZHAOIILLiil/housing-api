@@ -311,6 +311,14 @@ def list_official_sales_transactions_by_postcode(
     if not exists:
         raise NotFoundError("Postcode not found")
 
+
+    if filters.date_from and filters.date_to and filters.date_from > filters.date_to:
+        raise BadRequestError("date_from cannot be after date_to")
+
+    if filters.min_price is not None and filters.max_price is not None and filters.min_price > filters.max_price:
+        raise BadRequestError("min_price cannot be greater than max_price")
+
+
     where_sql, params = _build_sales_where(filters)
     order_sql = _build_order_by(filters)
 
