@@ -157,7 +157,7 @@ def init_schema(conn: sqlite3.Connection):
                            ON UPDATE CASCADE
                            ON DELETE RESTRICT
                            );
-                    CREATE INDEX IF NOT EXISTS idx_rent_area_time ON rent_stats_official(area_code, time_period);
+                       CREATE INDEX IF NOT EXISTS idx_rent_area_time ON rent_stats_official(area_code, time_period);
 
 
                        CREATE TABLE IF NOT EXISTS sales_transactions_official
@@ -243,19 +243,45 @@ def init_schema(conn: sqlite3.Connection):
                        );
 
                        CREATE INDEX IF NOT EXISTS idx_sales_fk_rejects_reason ON sales_fk_rejects(reason);
-                           
-                CREATE TABLE IF NOT EXISTS rent_stats_user
-                           (
-                               id INTEGER PRIMARY KEY AUTOINCREMENT,
-                               postcode TEXT,
-                               area_code TEXT,
-                               time_period TEXT NOT NULL,
-                               rent REAL NOT NULL,
-                               bedrooms INTEGER,
-                               property_type TEXT,
-                               created_at TEXT,
-                               source TEXT DEFAULT 'user' CHECK (source IN ('user','survey','partner')),
-                               FOREIGN KEY
+
+                       CREATE TABLE IF NOT EXISTS rent_stats_user
+                       (
+                           id
+                           INTEGER
+                           PRIMARY
+                           KEY
+                           AUTOINCREMENT,
+                           postcode
+                           TEXT,
+                           area_code
+                           TEXT,
+                           time_period
+                           TEXT
+                           NOT
+                           NULL,
+                           rent
+                           REAL
+                           NOT
+                           NULL,
+                           bedrooms
+                           INTEGER,
+                           property_type
+                           TEXT,
+                           created_at
+                           TEXT,
+                           source
+                           TEXT
+                           DEFAULT
+                           'user'
+                           CHECK (
+                           source
+                           IN
+                       (
+                           'user',
+                           'survey',
+                           'partner'
+                       )),
+                           FOREIGN KEY
                        (
                            postcode
                        )
@@ -265,8 +291,7 @@ def init_schema(conn: sqlite3.Connection):
                        )
                            ON UPDATE CASCADE
                            ON DELETE RESTRICT,
-                    
-                    FOREIGN KEY
+                           FOREIGN KEY
                        (
                            area_code
                        )
@@ -276,20 +301,45 @@ def init_schema(conn: sqlite3.Connection):
                        )
                            ON UPDATE CASCADE
                            ON DELETE RESTRICT
-                
-                );
-                CREATE TABLE IF NOT EXISTS sales_transactions_user
-                           (
-                               id INTEGER PRIMARY KEY AUTOINCREMENT,
-                               postcode TEXT,
-                               area_code TEXT,
-                               time_period TEXT NOT NULL,
-                               price REAL NOT NULL,
-                               property_type TEXT,
-                               created_at TEXT,
-                               source TEXT DEFAULT 'user' CHECK (source IN ('user','survey','partner')),,
-                               FOREIGN KEY
-                                                      (
+
+                           );
+                       CREATE TABLE IF NOT EXISTS sales_transactions_user
+                       (
+                           id
+                           INTEGER
+                           PRIMARY
+                           KEY
+                           AUTOINCREMENT,
+                           postcode
+                           TEXT,
+                           area_code
+                           TEXT,
+                           time_period
+                           TEXT
+                           NOT
+                           NULL,
+                           price
+                           REAL
+                           NOT
+                           NULL,
+                           property_type
+                           TEXT,
+                           created_at
+                           TEXT,
+                           source
+                           TEXT
+                           DEFAULT
+                           'user'
+                           CHECK (
+                           source
+                           IN
+                       (
+                           'user',
+                           'survey',
+                           'partner'
+                       )),
+                           FOREIGN KEY
+                       (
                            postcode
                        )
                            REFERENCES postcode_map
@@ -298,8 +348,7 @@ def init_schema(conn: sqlite3.Connection):
                        )
                            ON UPDATE CASCADE
                            ON DELETE RESTRICT,
-                    
-                    FOREIGN KEY
+                           FOREIGN KEY
                        (
                            area_code
                        )
@@ -309,12 +358,11 @@ def init_schema(conn: sqlite3.Connection):
                        )
                            ON UPDATE CASCADE
                            ON DELETE RESTRICT
-                
-                               
-                
-                );
-                           CREATE INDEX IF NOT EXISTS idx_sales_postcode ON sales_transactions_official(postcode);
-                           CREATE INDEX IF NOT EXISTS idx_sales_date ON sales_transactions_official(transaction_date);
+
+
+                           );
+                       CREATE INDEX IF NOT EXISTS idx_sales_postcode ON sales_transactions_official(postcode);
+                       CREATE INDEX IF NOT EXISTS idx_sales_date ON sales_transactions_official(transaction_date);
 
 
 
