@@ -16,7 +16,7 @@ T = TypeVar("T")
 YYYY_MM_RE = re.compile(r"^\d{4}-(0[1-9]|1[0-2])$")
 
 class Links(BaseModel):
-    self: str = Field(..., examples=["/official/sales-transactions/44F406B7-3032-1095-E063-4704A8C048D4"])
+    self: str = Field(..., examples=["sales_official/44F406B7-3032-1095-E063-4704A8C048D4"])
 
 class OfficialSalesTransactionOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
