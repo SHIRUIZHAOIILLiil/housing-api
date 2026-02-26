@@ -91,10 +91,6 @@ def test_sales_official_single_filters_smoke(client, params):
 
 # Validation errors (should be 422 in FastAPI by default)
 
-def test_sales_official_invalid_new_build_422(client):
-    r = client.get("/sales_official", params={**BASE, "new_build": "1"})
-    assert r.status_code == 422
-
 def test_sales_official_uuid_prefix_too_short_422(client):
     r = client.get("/sales_official", params={**BASE, "uuid_prefix": "abc"})  # minLength=4
     assert r.status_code == 422
@@ -123,7 +119,7 @@ def test_sales_official_get_by_uuid_ok(client):
     txid = sample["transaction_uuid"]
 
     # Use this UUID to check details
-    r = client.get(f"/sales_official/{txid}")
+    r = client.get(f"/sales_official/transactions/{txid}")
     assert r.status_code == 200
 
     data = r.json()

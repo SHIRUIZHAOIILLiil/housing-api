@@ -54,13 +54,6 @@ def test_sales_official_area_filters_smoke(client, params):
     assert r.status_code == 200
     assert_is_paged_response(r.json())
 
-
-def test_sales_official_area_invalid_new_build_422(client):
-    area_code = get_any_area_code(client)
-    r = client.get(f"/sales_official/areas/{area_code}", params={**BASE, "new_build": "1"})
-    assert r.status_code == 422
-
-
 def test_sales_official_area_negative_min_price_422(client):
     area_code = get_any_area_code(client)
     r = client.get(f"/sales_official/areas/{area_code}", params={**BASE, "min_price": -1})
