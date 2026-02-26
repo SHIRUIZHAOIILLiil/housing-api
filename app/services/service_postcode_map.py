@@ -1,3 +1,15 @@
+"""
+Service layer for postcode mapping.
+
+Responsibilities
+- Normalize postcode inputs (trim/uppercase/standard spacing) consistently.
+- Provide exact lookup and fuzzy lookup helpers.
+- Ensure lookups are indexed and efficient (postcode is a primary key; area_code may be indexed).
+
+Error handling
+- Raise NotFoundError for unknown postcodes (exact lookup).
+- Raise BadRequestError for malformed postcode patterns (if applicable).
+"""
 import sqlite3
 from typing import Optional
 from app.schemas.errors import NotFoundError, BadRequestError

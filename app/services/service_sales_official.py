@@ -1,4 +1,23 @@
-# app/services/sales_official_service.py
+"""
+Service layer for official sales transactions and aggregated statistics.
+
+Responsibilities
+- Query and filter HM Land Registry transactions by area_code/postcode/date range and property attributes.
+- Provide point stats and series stats aggregated by (area_code, time_period).
+- Provide availability helpers (min/max time_period) for stats endpoints.
+- Enforce consistent validation and normalization for:
+  - transaction_uuid (format/length if needed)
+  - postcode normalization
+  - time_period formatting (YYYY-MM) and date range logic
+
+Implementation notes
+- Keep SQL construction safe: use parameterized queries for user input.
+- Centralize optional filter SQL building to reduce duplicated logic and ensure consistent semantics.
+
+Error handling
+- Raise NotFoundError when no entity/data exists for the given identifier.
+- Raise BadRequestError when period/date ranges are malformed or contradictory.
+"""
 
 from __future__ import annotations
 

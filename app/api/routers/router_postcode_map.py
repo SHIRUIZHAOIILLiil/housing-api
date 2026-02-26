@@ -1,5 +1,21 @@
+"""
+Postcode mapping endpoints.
+
+These endpoints provide postcode -> area mapping, used for both official and user-generated records.
+
+Endpoints
+- GET /postcode_map
+  Fuzzy search postcodes and return their mapped area_code(s).
+- GET /postcode_map/{postcode}
+  Get mapping details for a single postcode.
+
+Notes
+- Postcode normalization (spacing/casing) is typically handled in the service layer.
+- Unknown postcode should raise NotFoundError (mapped to 404).
+- Validation errors are returned as 422.
+"""
 import sqlite3
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Query
 
 from app.api.deps import get_conn, COMMON_ERROR_RESPONSES
 from app.services.service_postcode_map import get_postcode_map, get_postcode_fuzzy_query

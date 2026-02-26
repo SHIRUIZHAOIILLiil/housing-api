@@ -1,3 +1,36 @@
+"""
+Official sales transaction and statistics endpoints.
+
+This router exposes read-only access to HM Land Registry derived sales transactions and aggregated statistics.
+
+Endpoints
+Transactions
+- GET /sales_official
+  List official sales transactions (supports search/filtering and pagination).
+- GET /sales_official/transactions/{transaction_uuid}
+  Retrieve a specific transaction by UUID.
+- GET /sales_official/areas/{area_code}
+  List transactions for an area_code (supports filtering and pagination).
+- GET /sales_official/postcodes/{postcode}
+  List transactions for a postcode (supports filtering and pagination).
+
+Aggregated statistics
+- GET /sales_official/sales-stats
+  Retrieve aggregated stats for (area_code, time_period) with optional filters.
+- GET /sales_official/areas/{area_code}/sales-stats
+  Retrieve a time-series of aggregated stats for an area_code.
+- GET /sales_official/areas/{area_code}/sales-stats/latest
+  Retrieve the latest available aggregated stats for an area_code.
+- GET /sales_official/areas/{area_code}/sales-stats/availability
+  Retrieve min/max available months for aggregated stats in an area_code.
+
+Notes
+- These endpoints are read-only; mutation of official transactions is not supported.
+- Filtering parameters should be applied consistently across list endpoints (property_type, new_build, tenure, date range).
+- Unknown identifiers (area_code/postcode/transaction_uuid) raise NotFoundError (404).
+- Validation errors are returned as 422; malformed time/date inputs should raise BadRequestError (400).
+"""
+
 from __future__ import annotations
 
 import sqlite3

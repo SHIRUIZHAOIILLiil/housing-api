@@ -1,3 +1,26 @@
+"""
+Service layer for user sales transactions.
+
+Responsibilities
+- Implement CRUD operations over the user sales table.
+- Apply optional filters in list endpoints:
+  - postcode, area_code
+  - from_period/to_period (YYYY-MM range)
+  - property_type
+  - min_price/max_price
+- Enforce domain-level validation:
+  - price must be positive
+  - time_period format and range logic
+  - FK existence checks if your design requires pre-validation (in addition to DB constraints)
+
+Implementation notes
+- Centralize dynamic WHERE clause construction to keep filter semantics consistent.
+- Ensure list endpoints have deterministic ordering if tests rely on stable pagination.
+
+Error handling
+- Raise NotFoundError when record_id does not exist.
+- Raise BadRequestError for malformed or contradictory filters (e.g., min_price > max_price).
+"""
 from __future__ import annotations
 
 import sqlite3

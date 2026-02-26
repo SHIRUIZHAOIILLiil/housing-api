@@ -1,3 +1,29 @@
+"""
+User-generated sales transaction endpoints.
+
+This router provides full CRUD operations for user-supplied sales transactions.
+It is separate from official HM Land Registry data and is intended for sandboxing user contributions.
+
+Endpoints
+- POST /user-sales-transactions
+  Create a user sales transaction.
+- GET /user-sales-transactions
+  List user sales transactions with filtering and pagination.
+- GET /user-sales-transactions/{record_id}
+  Retrieve a specific user sales transaction.
+- PUT /user-sales-transactions/{record_id}
+  Replace a user sales transaction (full update).
+- PATCH /user-sales-transactions/{record_id}
+  Partially update a user sales transaction.
+- DELETE /user-sales-transactions/{record_id}
+  Delete a user sales transaction.
+
+Notes
+- postcode/area_code should be consistent with postcode_map and areas tables (FK constraints).
+- If area_code is optional, the service may derive it from postcode_map.
+- Unknown record_id raises NotFoundError (404).
+- Validation errors are returned as 422; domain errors are mapped consistently via global exception handlers.
+"""
 from __future__ import annotations
 
 import sqlite3

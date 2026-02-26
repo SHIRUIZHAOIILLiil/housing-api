@@ -1,3 +1,29 @@
+"""
+Official rent statistics endpoints.
+
+This router exposes read-only access to ONS-derived rental statistics aggregated by area and time period.
+
+Endpoints
+- GET /rent_stats_official/rent-stats
+  Retrieve an aggregated rent stats point for (area_code, time_period) with optional filters.
+- GET /rent_stats_official/areas/{area_code}/rent-stats
+  Retrieve a time-series for one area_code over a period range.
+- GET /rent_stats_official/areas/{area_code}/rent-stats/latest
+  Retrieve the latest available point for an area_code.
+- GET /rent_stats_official/areas/{area_code}/rent-stats/availability
+  Retrieve min/max available months for an area_code.
+- GET /rent_stats_official/areas/{area_code}/rent-trend.png
+  Render a trend plot (PNG) for an area_code over a period range and metric selection.
+- GET /rent_stats_official/areas/rent-trend.png
+  Render a trend plot (PNG) where the area is provided by name (fuzzy match).
+
+Notes
+- These endpoints are read-only; no mutation of official tables is allowed.
+- Image endpoints return binary PNG responses; failures still follow the JSON error contract via global handlers.
+- Unknown areas/periods should raise NotFoundError (404); malformed periods should raise BadRequestError (400).
+- Validation errors are returned as 422.
+"""
+
 import sqlite3, re
 from fastapi import APIRouter, Depends, Query, Response
 from typing import Optional, Literal

@@ -1,3 +1,15 @@
+"""
+Service layer for area resources.
+
+Responsibilities
+- Read-only access to the areas reference table.
+- Validation of inputs that are not covered by Pydantic constraints (if any).
+- Conversion of sqlite3.Row results into plain dicts / Pydantic models.
+
+Error handling
+- Raise NotFoundError when an area_code does not exist.
+- Raise BadRequestError for malformed queries or parameters if the router allows free-text search.
+"""
 import sqlite3
 from typing import Optional
 from app.schemas.errors import NotFoundError

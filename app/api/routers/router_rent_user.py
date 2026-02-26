@@ -1,4 +1,29 @@
-# app/api/routers/router_rent_user.py
+"""
+User-generated rental record endpoints.
+
+This router provides full CRUD operations for rental records created by users.
+It is intentionally separate from official rent statistics to avoid contaminating reference datasets.
+
+Endpoints
+- POST /rent_user
+  Create a new user rental record.
+- GET /rent_user
+  List user rental records with filtering and pagination.
+- GET /rent_user/{record_id}
+  Retrieve a specific user rental record.
+- PUT /rent_user/{record_id}
+  Replace a user rental record (full update).
+- PATCH /rent_user/{record_id}
+  Partially update a user rental record.
+- DELETE /rent_user/{record_id}
+  Delete a user rental record.
+
+Notes
+- postcode/area_code should be consistent with postcode_map and areas tables (FK constraints).
+- If area_code is optional in the schema, the service may derive it from postcode_map.
+- Unknown record_id raises NotFoundError (404).
+- Validation errors are returned as 422; domain errors (e.g., inconsistent FK) are returned as 400/404 depending on your global mapping.
+"""
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Response, status, Query

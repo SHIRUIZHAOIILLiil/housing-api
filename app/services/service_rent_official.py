@@ -1,3 +1,21 @@
+"""
+Service layer for official rental statistics.
+
+Responsibilities
+- Read-only queries over the ONS rental stats table.
+- Support optional domain filters (e.g., bedrooms/property_type/metric) where applicable.
+- Implement availability queries (min/max time_period) for user guidance and client-side validation.
+- Generate plot data and render a PNG chart for trend endpoints.
+
+Implementation notes
+- time_period is treated as YYYY-MM (or derived from YYYY-MM-DD where applicable).
+- Services should consistently validate and normalize time range inputs before querying.
+- Prefer returning plain dicts/Pydantic models; do not leak sqlite3.Row outside the service layer.
+
+Error handling
+- Raise NotFoundError when area/time ranges have no matching data.
+- Raise BadRequestError when time_period format or range is invalid.
+"""
 import matplotlib
 matplotlib.use("Agg")
 import sqlite3, re, io, matplotlib.pyplot as plt

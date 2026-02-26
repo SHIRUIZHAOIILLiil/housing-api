@@ -1,4 +1,24 @@
-# app/services/rent_user_service.py
+"""
+Service layer for user-generated rental records.
+
+Responsibilities
+- Implement CRUD operations over the rent_user table.
+- Apply optional filters in list endpoints (time_period, area_code, postcode, bedrooms, property_type).
+- Enforce domain-level validation:
+  - rent must be positive
+  - time_period format (YYYY-MM) if required by the domain
+  - FK existence checks (postcode_map, areas) where needed
+- Normalize inputs (postcode formatting, property_type casing if applicable).
+
+Implementation notes
+- Return Pydantic models or plain dicts; keep sqlite3.Row internal.
+- Prefer partial update logic that only touches provided fields (PATCH).
+- Ensure updates preserve created_at unless explicitly designed otherwise.
+
+Error handling
+- Raise NotFoundError when record_id does not exist.
+- Raise BadRequestError for invalid domain combinations (e.g., postcode not in map, malformed period).
+"""
 from __future__ import annotations
 
 import sqlite3
