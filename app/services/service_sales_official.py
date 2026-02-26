@@ -117,9 +117,9 @@ def _build_stats_extra_filters(filters) -> tuple[str, list[Any]]:
         clauses.append("st.property_type = ?")
         params.append(filters.property_type)
 
-    if filters.new_build:
+    if filters.new_build is not None:
         clauses.append("st.new_build = ?")
-        params.append(filters.new_build)
+        params.append(1 if filters.new_build else 0)
 
     if filters.tenure:
         clauses.append("st.tenure = ?")

@@ -5,7 +5,6 @@ from pydantic import BaseModel, Field, ConfigDict
 
 
 PropertyType = Literal["D", "S", "T", "F", "O"]  # Detached/Semi/Terraced/Flat/Other
-NewBuildFlag = Literal["Y", "N"]
 TenureType = Literal["F", "L", "U"]  # Freehold/Leasehold/Unknown
 
 SortBy = Literal["transaction_date", "price"]
@@ -28,7 +27,7 @@ class OfficialSalesTransactionOut(BaseModel):
     area_code: Optional[str] = Field(None, description="Derived via postcode->area mapping")
 
     property_type: Optional[PropertyType] = Field(None, description="D/S/T/F/O")
-    new_build: Optional[NewBuildFlag] = Field(None, description="Y if new build else N")
+    new_build: Optional[bool] = None
     tenure: Optional[TenureType] = Field(None, description="F/L/U")
 
     paon: Optional[str] = Field(None, description="Primary Addressable Object Name/Number")
@@ -44,7 +43,7 @@ class SalesTransactionsQuery(BaseModel):
     min_price: Optional[float] = Field(None, ge=0)
     max_price: Optional[float] = Field(None, ge=0)
     property_type: Optional[PropertyType] = None
-    new_build: Optional[NewBuildFlag] = None
+    new_build: Optional[bool] = None
     tenure: Optional[TenureType] = None
     limit: int = Field(50, ge=1, le=200)
     offset: int = Field(0, ge=0)
@@ -94,7 +93,7 @@ class SalesStatsOut(BaseModel):
 
     # Echoing the filter back allows the client to understand "under what conditions it was calculated".
     property_type: Optional[PropertyType] = None
-    new_build: Optional[NewBuildFlag] = None
+    new_build: Optional[bool] = None
     tenure: Optional[TenureType] = None
 
 
@@ -122,7 +121,7 @@ class SalesStatsPointQuery(BaseModel):
     min_price: Optional[float] = Field(None, ge=0)
     max_price: Optional[float] = Field(None, ge=0)
     property_type: Optional[PropertyType] = None
-    new_build: Optional[NewBuildFlag] = None
+    new_build: Optional[bool] = Field(None, description="Filter by new build: true=1, false=0 in DB")
     tenure: Optional[TenureType] = None
 
 
@@ -136,7 +135,7 @@ class SalesStatsSeriesQuery(BaseModel):
     min_price: Optional[float] = Field(None, ge=0)
     max_price: Optional[float] = Field(None, ge=0)
     property_type: Optional[PropertyType] = None
-    new_build: Optional[NewBuildFlag] = None
+    new_build: Optional[bool] = None
     tenure: Optional[TenureType] = None
 
     limit: int = Field(240, ge=1, le=500)
@@ -146,5 +145,5 @@ class SalesStatsLatestQuery(BaseModel):
     min_price: Optional[float] = Field(None, ge=0)
     max_price: Optional[float] = Field(None, ge=0)
     property_type: Optional[PropertyType] = None
-    new_build: Optional[NewBuildFlag] = None
+    new_build: Optional[bool] = None
     tenure: Optional[TenureType] = None

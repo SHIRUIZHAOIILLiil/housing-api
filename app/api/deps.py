@@ -4,7 +4,7 @@ from fastapi import Query
 from datetime import date
 from app.core.config import Settings
 from app.schemas.sales_official import (
-    SalesGlobalFilters, SalesScopedFilters, PropertyType, NewBuildFlag, TenureType, SortBy, SortOrder
+    SalesGlobalFilters, SalesScopedFilters, PropertyType, TenureType, SortBy, SortOrder
 )
 from app.schemas.errors import ErrorOut
 
@@ -32,7 +32,7 @@ def get_sales_global_filters(
     min_price: Optional[int] = Query(default=None, ge=0),
     max_price: Optional[int] = Query(default=None, ge=0),
     property_type: Optional[PropertyType] = Query(default=None),
-    new_build: Optional[NewBuildFlag] = Query(default=None),
+    new_build: Optional[bool] = Query(default=None),
     tenure: Optional[TenureType] = Query(default=None),
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
@@ -67,7 +67,7 @@ def get_sales_scoped_filters(
     min_price: Optional[int] = Query(default=None, ge=0),
     max_price: Optional[int] = Query(default=None, ge=0),
     property_type: Optional[PropertyType] = Query(default=None),
-    new_build: Optional[NewBuildFlag] = Query(default=None),
+    new_build: Optional[bool] = Query(default=None),
     tenure: Optional[TenureType] = Query(default=None),
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
