@@ -24,7 +24,8 @@ Notes
 - Validation errors are returned as 422.
 """
 
-import sqlite3, re
+import sqlite3
+import re
 from fastapi import APIRouter, Depends, Query, Response
 from typing import Optional, Literal
 from app.api.deps import get_conn, COMMON_ERROR_RESPONSES

@@ -26,7 +26,7 @@ from app.services.service_area import list_areas, get_area, area_exists
 from app.services.service_postcode_map import get_postcode_map_by_area_code
 from app.schemas.areas import AreaOut
 from app.schemas.postcode import PostcodeOut
-from app.schemas.errors import ErrorOut, NotFoundError
+from app.schemas.errors import NotFoundError
 router = APIRouter()
 
 @router.get("", response_model=list[AreaOut], responses=COMMON_ERROR_RESPONSES)

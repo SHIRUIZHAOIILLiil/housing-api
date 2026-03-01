@@ -18,7 +18,10 @@ Error handling
 """
 import matplotlib
 matplotlib.use("Agg")
-import sqlite3, re, io, matplotlib.pyplot as plt
+import sqlite3
+import re
+import io
+import matplotlib.pyplot as plt
 from typing import Optional, List, Literal
 from app.schemas.rent_stats_official import RentStatsOfficialOut, BedStats, OverallStats, PropertyTypePrices, RentStatsAvailabilityOut
 from app.schemas.errors import BadRequestError, NotFoundError, UnprocessableEntityError

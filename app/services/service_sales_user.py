@@ -235,7 +235,7 @@ def replace_user_sale(conn: sqlite3.Connection, record_id: int, payload: SalesUs
     PUT semantics: replace the whole resource (except server-managed created_at).
     We keep created_at unchanged.
     """
-    existing = get_user_sale(conn, record_id)
+    get_user_sale(conn, record_id)
 
     postcode = norm_postcode(payload.postcode)
     if not postcode:

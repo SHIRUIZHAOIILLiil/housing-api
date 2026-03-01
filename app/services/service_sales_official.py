@@ -21,7 +21,8 @@ Error handling
 
 from __future__ import annotations
 
-import sqlite3, re
+import sqlite3
+import re
 from typing import Any, Optional
 from app.schemas.sales_official import SalesTransactionsQuery
 from app.schemas.errors import BadRequestError, NotFoundError
@@ -397,7 +398,7 @@ def get_official_sales_stats_point(
     conn.row_factory = sqlite3.Row
 
     exists = conn.execute(
-        f"SELECT 1 FROM areas WHERE area_code = ? LIMIT 1",
+        "SELECT 1 FROM areas WHERE area_code = ? LIMIT 1",
         (area_code,),
     ).fetchone()
     _validate_yyyymm(time_period, "time_period")
@@ -451,7 +452,7 @@ def list_official_sales_stats_series(
         raise BadRequestError("min_price cannot be greater than max_price")
 
     exists = conn.execute(
-        f"SELECT 1 FROM areas WHERE area_code = ? LIMIT 1",
+        "SELECT 1 FROM areas WHERE area_code = ? LIMIT 1",
         (area_code,),
     ).fetchone()
     if not exists:
@@ -503,13 +504,13 @@ def get_official_sales_stats_availability(
     conn.row_factory = sqlite3.Row
 
     exists = conn.execute(
-        f"SELECT 1 FROM areas WHERE area_code = ? LIMIT 1",
+        "SELECT 1 FROM areas WHERE area_code = ? LIMIT 1",
         (area_code,),
     ).fetchone()
     if not exists:
         raise NotFoundError("Area not found")
 
-    sql = f"""
+    sql = """
         SELECT
             MIN(SUBSTR(st.transaction_date, 1, 7)) AS min_time_period,
             MAX(SUBSTR(st.transaction_date, 1, 7)) AS max_time_period,
@@ -534,7 +535,7 @@ def get_official_sales_stats_latest(
         raise BadRequestError("min_price cannot be greater than max_price")
 
     exists = conn.execute(
-        f"SELECT 1 FROM areas WHERE area_code = ? LIMIT 1",
+        "SELECT 1 FROM areas WHERE area_code = ? LIMIT 1",
         (area_code,),
     ).fetchone()
     if not exists:

@@ -151,7 +151,6 @@ def test_sales_official_postcodes_filter_by_date_range(client):
     assert r_ok.json()["meta"]["count"] >= 1
 
     # window that excludes the date (should be empty OR 404 depending on your design)
-    day_after = (d.replace(day=d.day) if True else d)  # keep simple; do an easier strict window:
     r_empty = client.get(
         f"/sales_official/postcodes/{postcode}",
         params={"date_from": "1900-01-01", "date_to": "1900-01-02"},
