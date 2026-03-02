@@ -25,7 +25,7 @@ def create_app() -> FastAPI:
     app.include_router(router_sales_user.router, prefix="/user-sales-transactions", tags=["user_sales_transactions"])
     return app
 
-
+app = create_app()
 
 
 if __name__ == "__main__":
