@@ -3,7 +3,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 from app.core.config import Settings
-from app.api.routers import debug, router_areas, router_rent, router_postcode_map, router_sales_official, router_rent_user, router_sales_user
+from app.api.routers import router_areas, router_rent, router_postcode_map, router_sales_official, router_rent_user, router_sales_user
 from app.schemas.errors import AppError
 
 def create_app() -> FastAPI:
@@ -17,7 +17,6 @@ def create_app() -> FastAPI:
     def app_error_handler(request: Request, exc: AppError):
         return JSONResponse(status_code=exc.status_code, content={"detail": exc.message})
 
-    app.include_router(debug.router, tags=["debug"])
     app.include_router(router_areas.router, prefix="/areas", tags=["areas"])
     app.include_router(router_postcode_map.router, prefix="/postcode_map", tags=["postcode_map"])
     app.include_router(router_rent.router, prefix="/rent_stats_official", tags=["rent_stats_official"])
