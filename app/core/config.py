@@ -33,6 +33,10 @@ class Settings(BaseSettings):
             'pp-complete-2025.csv',
             'priceindexofprivaterentsukmonthlypricestatistics.xlsx']
 
+    JWT_ALGORITHM: str = "HS256"
+    JWT_EXPIRE_MINUTES: int = 60
+    JWT_SECRET: str = os.getenv("JWT_SECRET")
+
     @property
     def port(self):
         return self.PORT

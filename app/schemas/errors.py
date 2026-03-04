@@ -16,3 +16,9 @@ class NotFoundError(AppError):
 
 class UnprocessableEntityError(AppError):
     status_code = 422
+
+class ConflictError(AppError):
+    status_code = 409
+
+class UnauthorizedError(AppError):
+    status_code = 401

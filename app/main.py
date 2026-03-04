@@ -3,13 +3,13 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 from app.core.config import Settings
-from app.api.routers import router_areas, router_rent, router_postcode_map, router_sales_official, router_rent_user, router_sales_user
+from app.api.routers import router_areas, router_rent, router_postcode_map, router_sales_official, router_rent_user, router_sales_user, router_auth
 from app.schemas.errors import AppError
 
 def create_app() -> FastAPI:
     app = FastAPI(
         title="Housing API",
-        version="1.0",
+        version="2.0",
         debug=True,
     )
 
@@ -23,6 +23,7 @@ def create_app() -> FastAPI:
     app.include_router(router_sales_official.router, prefix="/sales_official", tags=["sales_official"])
     app.include_router(router_rent_user.router, prefix="/rent_user", tags=["rent_user"])
     app.include_router(router_sales_user.router, prefix="/user-sales-transactions", tags=["user_sales_transactions"])
+    app.include_router(router_auth.router, prefix="/auth", tags=["authority"])
     return app
 
 app = create_app()

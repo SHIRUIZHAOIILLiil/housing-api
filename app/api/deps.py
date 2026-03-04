@@ -1,12 +1,16 @@
 import sqlite3
 from typing import Generator, Optional
-from fastapi import Query
+from fastapi import Query, Depends
 from datetime import date
 from app.core.config import Settings
 from app.schemas.sales_official import (
     SalesGlobalFilters, SalesScopedFilters, PropertyType, TenureType, SortBy, SortOrder
 )
-from app.schemas.errors import ErrorOut
+from app.security.jwt import decode_access_token
+from app.services.service_users import get_user_by_id
+
+from app.schemas.errors import ErrorOut, UnauthorizedError
+from fastapi.security import OAuth2PasswordBearer
 
 settings = Settings()
 
@@ -14,6 +18,8 @@ COMMON_ERROR_RESPONSES = {
     400: {"model": ErrorOut, "description": "Invalid input."},
     404: {"model": ErrorOut, "description": "Resource not found."},
 }
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
 def get_conn() -> Generator[sqlite3.Connection, None, None]:
     conn = sqlite3.connect(settings.DATABASE)
@@ -89,3 +95,19 @@ def get_sales_scoped_filters(
         order=order,
         include_total=include_total,
     )
+
+def get_current_user(
+    token: str = Depends(oauth2_scheme),
+    conn: sqlite3.Connection = Depends(get_conn),
+):
+    """
+    Extract user from JWT token.
+    Raises UnauthorizedError if invalid.
+    """
+    user_id = decode_access_token(token)
+
+    user = get_user_by_id(conn, user_id)
+    if user is None:
+        raise UnauthorizedError("Invalid token")
+
+    return user

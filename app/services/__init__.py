@@ -4,6 +4,7 @@ from .service_rent_official import get_rent_stats_official_latest, get_rent_stat
 from .service_sales_official import get_official_sales_stats_point, list_official_sales_stats_series, get_official_sales_stats_latest, get_official_sales_stats_availability, list_official_sales_transactions, list_official_sales_transactions_by_area, list_official_sales_transactions_by_postcode, get_official_sales_transaction_by_uuid
 from .service_rent_user import create_rental_record, get_rental_record, list_rental_records, update_rental_record, delete_rental_record
 from .service_sales_user import create_user_sale, get_user_sale, list_user_sales, patch_user_sale, delete_user_sale, replace_user_sale
+from .service_users import create_user, get_user_by_id, get_user_by_login_key
 
 
 __all__ = [
@@ -36,5 +37,9 @@ __all__ = [
     "list_user_sales",
     "patch_user_sale",
     "delete_user_sale",
-    "replace_user_sale"
+    "replace_user_sale",
+
+    "create_user",
+    "get_user_by_id",
+    "get_user_by_login_key"
 ]
