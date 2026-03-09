@@ -1,4 +1,6 @@
 import pytest
+
+
 def assert_status(r, code: int):
     assert r.status_code == code, f"Expected {code}, got {r.status_code}, body={r.text}"
 
@@ -9,9 +11,6 @@ def assert_error_has_detail(r):
 
 
 def get_valid_postcode_and_area_code(client):
-    """
-    Fetch one valid postcode + area_code from postcode_map to avoid hardcoding test data.
-    """
     r = client.get("/postcode_map", params={"limit": 1})
     assert_status(r, 200)
     items = r.json()
@@ -19,8 +18,8 @@ def get_valid_postcode_and_area_code(client):
     return items[0]["postcode"], items[0]["area_code"]
 
 
-def create_user_sale(client, payload: dict):
-    r = client.post("/user-sales-transactions", json=payload)
+def create_user_sale(client, auth_headers, payload: dict):
+    r = client.post("/user-sales-transactions", json=payload, headers=auth_headers)
     assert_status(r, 201)
     data = r.json()
     assert "id" in data and isinstance(data["id"], int)
@@ -28,19 +27,16 @@ def create_user_sale(client, payload: dict):
     return data
 
 
-def delete_user_sale(client, record_id: int):
-    r = client.delete(f"/user-sales-transactions/{record_id}")
+def delete_user_sale(client, auth_headers, record_id: int):
+    r = client.delete(f"/user-sales-transactions/{record_id}", headers=auth_headers)
     assert_status(r, 204)
 
 
 @pytest.fixture
-def sales_user_seed(client):
-    """
-    Create a couple of user sales transactions for filtering/pagination tests and clean them up afterwards.
-    """
+def sales_user_seed(client, auth_headers):
     postcode, area_code = get_valid_postcode_and_area_code(client)
 
-    rec1 = create_user_sale(client, {
+    rec1 = create_user_sale(client, auth_headers, {
         "postcode": postcode,
         "area_code": area_code,
         "time_period": "2024-07",
@@ -49,7 +45,7 @@ def sales_user_seed(client):
         "source": "user"
     })
 
-    rec2 = create_user_sale(client, {
+    rec2 = create_user_sale(client, auth_headers, {
         "postcode": postcode,
         "area_code": area_code,
         "time_period": "2024-08",
@@ -67,15 +63,15 @@ def sales_user_seed(client):
 
     for rec in (rec1, rec2):
         rid = rec["id"]
-        r = client.delete(f"/user-sales-transactions/{rid}")
+        r = client.delete(f"/user-sales-transactions/{rid}", headers=auth_headers)
         if r.status_code not in (204, 404):
             pytest.fail(f"Cleanup failed for id={rid}: {r.status_code}, {r.text}")
 
 
-def test_sales_user_create_and_get_by_id(client):
+def test_sales_user_create_and_get_by_id(client, auth_headers):
     postcode, area_code = get_valid_postcode_and_area_code(client)
 
-    created = create_user_sale(client, {
+    created = create_user_sale(client, auth_headers, {
         "postcode": postcode,
         "area_code": area_code,
         "time_period": "2024-07",
@@ -94,16 +90,13 @@ def test_sales_user_create_and_get_by_id(client):
     assert got["time_period"] == "2024-07"
     assert got["price"] == 275000
 
-    delete_user_sale(client, rid)
+    delete_user_sale(client, auth_headers, rid)
 
 
-def test_sales_user_create_without_area_code_allows_derivation(client):
-    """
-    area_code is optional in the schema; service may derive it from postcode_map.
-    """
+def test_sales_user_create_without_area_code_allows_derivation(client, auth_headers):
     postcode, _ = get_valid_postcode_and_area_code(client)
 
-    created = create_user_sale(client, {
+    created = create_user_sale(client, auth_headers, {
         "postcode": postcode,
         "time_period": "2024-07",
         "price": 300000,
@@ -113,7 +106,7 @@ def test_sales_user_create_without_area_code_allows_derivation(client):
     assert created["postcode"] == postcode
     assert created["price"] == 300000
 
-    delete_user_sale(client, created["id"])
+    delete_user_sale(client, auth_headers, created["id"])
 
 
 def test_sales_user_list_basic(client, sales_user_seed):
@@ -123,19 +116,23 @@ def test_sales_user_list_basic(client, sales_user_seed):
     assert "items" in data and isinstance(data["items"], list)
 
 
-def test_sales_user_put_replaces_fields(client, sales_user_seed):
+def test_sales_user_put_replaces_fields(client, auth_headers, sales_user_seed):
     rid = sales_user_seed["rec1"]["id"]
     postcode = sales_user_seed["postcode"]
     area_code = sales_user_seed["area_code"]
 
-    r_put = client.put(f"/user-sales-transactions/{rid}", json={
-        "postcode": postcode,
-        "area_code": area_code,
-        "time_period": "2024-09",
-        "price": 410000,
-        "property_type": "detached",
-        "source": "user"
-    })
+    r_put = client.put(
+        f"/user-sales-transactions/{rid}",
+        json={
+            "postcode": postcode,
+            "area_code": area_code,
+            "time_period": "2024-09",
+            "price": 410000,
+            "property_type": "detached",
+            "source": "user"
+        },
+        headers=auth_headers,
+    )
     assert_status(r_put, 200)
     updated = r_put.json()
     assert updated["id"] == rid
@@ -144,20 +141,24 @@ def test_sales_user_put_replaces_fields(client, sales_user_seed):
     assert updated["property_type"] == "detached"
 
 
-def test_sales_user_patch_partial_update(client, sales_user_seed):
+def test_sales_user_patch_partial_update(client, auth_headers, sales_user_seed):
     rid = sales_user_seed["rec2"]["id"]
 
-    r_patch = client.patch(f"/user-sales-transactions/{rid}", json={"price": 320000})
+    r_patch = client.patch(
+        f"/user-sales-transactions/{rid}",
+        json={"price": 320000},
+        headers=auth_headers,
+    )
     assert_status(r_patch, 200)
     patched = r_patch.json()
     assert patched["id"] == rid
     assert patched["price"] == 320000
 
 
-def test_sales_user_delete_then_get_not_found(client):
+def test_sales_user_delete_then_get_not_found(client, auth_headers):
     postcode, area_code = get_valid_postcode_and_area_code(client)
 
-    created = create_user_sale(client, {
+    created = create_user_sale(client, auth_headers, {
         "postcode": postcode,
         "area_code": area_code,
         "time_period": "2024-07",
@@ -165,7 +166,7 @@ def test_sales_user_delete_then_get_not_found(client):
     })
 
     rid = created["id"]
-    delete_user_sale(client, rid)
+    delete_user_sale(client, auth_headers, rid)
 
     r_get = client.get(f"/user-sales-transactions/{rid}")
     assert_status(r_get, 404)
@@ -206,10 +207,6 @@ def test_sales_user_filters_by_price_range(client, sales_user_seed):
 
 
 def test_sales_user_filters_by_period_range(client, sales_user_seed):
-    """
-    Filters use from_period / to_period; exact semantics depend on implementation
-    (usually inclusive bounds on YYYY-MM).
-    """
     r = client.get("/user-sales-transactions", params={"from_period": "2024-08", "to_period": "2024-08"})
     assert_status(r, 200)
     items = r.json()["items"]
@@ -235,57 +232,93 @@ def test_sales_user_unknown_id_not_found(client):
     assert_error_has_detail(r)
 
 
-def test_sales_user_validation_price_must_be_positive(client):
+def test_sales_user_validation_price_must_be_positive(client, auth_headers):
     postcode, area_code = get_valid_postcode_and_area_code(client)
-    r = client.post("/user-sales-transactions", json={
-        "postcode": postcode,
-        "area_code": area_code,
-        "time_period": "2024-07",
-        "price": 0
-    })
+    r = client.post(
+        "/user-sales-transactions",
+        json={
+            "postcode": postcode,
+            "area_code": area_code,
+            "time_period": "2024-07",
+            "price": 0
+        },
+        headers=auth_headers,
+    )
     assert_status(r, 422)
 
 
-def test_sales_user_validation_postcode_too_short(client):
-    r = client.post("/user-sales-transactions", json={
-        "postcode": "L",
-        "time_period": "2024-07",
-        "price": 250000
-    })
+def test_sales_user_validation_postcode_too_short(client, auth_headers):
+    r = client.post(
+        "/user-sales-transactions",
+        json={
+            "postcode": "L",
+            "time_period": "2024-07",
+            "price": 250000
+        },
+        headers=auth_headers,
+    )
     assert_status(r, 422)
 
 
-def test_sales_user_validation_invalid_property_type(client):
+def test_sales_user_validation_invalid_property_type(client, auth_headers):
     postcode, area_code = get_valid_postcode_and_area_code(client)
-    r = client.post("/user-sales-transactions", json={
-        "postcode": postcode,
-        "area_code": area_code,
-        "time_period": "2024-07",
-        "price": 250000,
-        "property_type": "castle"
-    })
+    r = client.post(
+        "/user-sales-transactions",
+        json={
+            "postcode": postcode,
+            "area_code": area_code,
+            "time_period": "2024-07",
+            "price": 250000,
+            "property_type": "castle"
+        },
+        headers=auth_headers,
+    )
     assert_status(r, 422)
 
 
-def test_sales_user_validation_invalid_source(client):
+def test_sales_user_validation_invalid_source(client, auth_headers):
     postcode, area_code = get_valid_postcode_and_area_code(client)
-    r = client.post("/user-sales-transactions", json={
-        "postcode": postcode,
-        "area_code": area_code,
-        "time_period": "2024-07",
-        "price": 250000,
-        "source": "twitter"
-    })
+    r = client.post(
+        "/user-sales-transactions",
+        json={
+            "postcode": postcode,
+            "area_code": area_code,
+            "time_period": "2024-07",
+            "price": 250000,
+            "source": "twitter"
+        },
+        headers=auth_headers,
+    )
     assert_status(r, 422)
 
 
-def test_sales_user_patch_validation_invalid_price(client, sales_user_seed):
+def test_sales_user_patch_validation_invalid_price(client, auth_headers, sales_user_seed):
     rid = sales_user_seed["rec1"]["id"]
-    r = client.patch(f"/user-sales-transactions/{rid}", json={"price": 0})
+    r = client.patch(
+        f"/user-sales-transactions/{rid}",
+        json={"price": 0},
+        headers=auth_headers,
+    )
     assert_status(r, 422)
 
 
-def test_sales_user_delete_unknown_id_not_found(client):
-    r = client.delete("/user-sales-transactions/999999999")
+def test_sales_user_delete_unknown_id_not_found(client, auth_headers):
+    r = client.delete("/user-sales-transactions/999999999", headers=auth_headers)
     assert_status(r, 404)
     assert_error_has_detail(r)
+
+def test_sales_user_create_without_token_401(client):
+    r = client.post("/user-sales-transactions", json={
+        "postcode": "LS29JT",
+        "area_code": "E08000035",
+        "time_period": "2024-09",
+        "price": 300000,
+        "property_type": "flat",
+        "source": "user",
+    })
+    assert r.status_code == 401
+
+
+def test_sales_user_delete_without_token_401(client):
+    r = client.delete("/user-sales-transactions/1")
+    assert r.status_code == 401

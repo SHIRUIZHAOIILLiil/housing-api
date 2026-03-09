@@ -18,7 +18,30 @@ def _init_schema(conn: sqlite3.Connection) -> None:
         DROP TABLE IF EXISTS areas;
         DROP TABLE IF EXISTS rent_stats_official;
         DROP TABLE IF EXISTS sales_transactions_official;
+        DROP TABLE IF EXISTS sales_transactions_user;
         DROP TABLE IF EXISTS rent_stats_user;
+        DROP TABLE IF EXISTS audit_logs;
+        DROP TABLE IF EXISTS users;
+        
+        CREATE TABLE users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT NOT NULL UNIQUE,
+            email TEXT NOT NULL UNIQUE,
+            password_hash TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        );
+
+        CREATE TABLE audit_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
+            action TEXT NOT NULL,
+            resource_type TEXT NOT NULL,
+            resource_id INTEGER,
+            request_id TEXT,
+            detail TEXT,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id)
+        );
 
         CREATE TABLE areas (
             area_code TEXT PRIMARY KEY,
@@ -74,6 +97,7 @@ def _init_schema(conn: sqlite3.Connection) -> None:
                 property_type TEXT,
                 created_at TEXT,
                 source TEXT DEFAULT 'user' CHECK ( source IN ('user', 'survey', 'partner')),
+                uploader_id INTEGER,
                 FOREIGN KEY (postcode)REFERENCES postcode_map( postcode),
                 FOREIGN KEY (area_code) REFERENCES areas(area_code)
                 );
@@ -87,6 +111,7 @@ def _init_schema(conn: sqlite3.Connection) -> None:
                 property_type TEXT,
                 created_at TEXT,
                 source TEXT DEFAULT 'user' CHECK ( source IN ('user', 'survey', 'partner')),
+                uploader_id INTEGER,
                 FOREIGN KEY (postcode)REFERENCES postcode_map( postcode),
                 FOREIGN KEY (area_code) REFERENCES areas(area_code)
                 );
@@ -196,41 +221,41 @@ def _seed_data(conn: sqlite3.Connection) -> None:
     )
 
     conn.executemany(
-        "INSERT INTO rent_stats_user (postcode, area_code, time_period, rent, bedrooms, property_type, created_at, source)"
-        " VALUES(?, ?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO rent_stats_user (postcode, area_code, time_period, rent, bedrooms, property_type, created_at, source, uploader_id)"
+        " VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)",
         [
-            ('LS11AA', 'E08000035', '2024-06', 850, 1, 'flat', '2025-02-20 10:00:00', 'user'),
-            ('LS28JT', 'E08000035', '2024-06', 1150, 2, 'flat', '2025-02-20 10:05:00', 'user'),
-            ('LS62UW', 'E08000035', '2024-07', 1350, 3, 'terraced', '2025-02-20 10:10:00', 'user'),
-            ('LS81BY', 'E08000035', '2024-07', 1600, 4, 'semidetached', '2025-02-20 10:12:00', 'user'),
-            ('M12AB', 'E08000003', '2024-06', 900, 1, 'flat', '2025-02-20 11:00:00', 'user'),
-            ('M146PL', 'E08000003', '2024-07', 1400, 3, 'terraced', '2025-02-20 11:05:00', 'user'),
-            ('SW1A1AA', 'E09000033', '2024-06', 2100, 2, 'flat', '2025-02-20 11:10:00', 'user'),
-            ('SW113DL', 'E09000033', '2024-07', 2800, 3, 'detached', '2025-02-20 11:12:00', 'user'),
-            ('B11AA', 'E08000025', '2024-06', 800, 1, 'flat', '2025-02-20 11:20:00', 'user'),
-            ('B152TT', 'E08000025', '2024-07', 1250, 3, 'semidetached', '2025-02-20 11:25:00', 'user')
+            ('LS11AA', 'E08000035', '2024-06', 850, 1, 'flat', '2025-02-20 10:00:00', 'user', 1),
+            ('LS28JT', 'E08000035', '2024-06', 1150, 2, 'flat', '2025-02-20 10:05:00', 'user', 1),
+            ('LS62UW', 'E08000035', '2024-07', 1350, 3, 'terraced', '2025-02-20 10:10:00', 'user', 1),
+            ('LS81BY', 'E08000035', '2024-07', 1600, 4, 'semidetached', '2025-02-20 10:12:00', 'user', 1),
+            ('M12AB', 'E08000003', '2024-06', 900, 1, 'flat', '2025-02-20 11:00:00', 'user', 1),
+            ('M146PL', 'E08000003', '2024-07', 1400, 3, 'terraced', '2025-02-20 11:05:00', 'user', 1),
+            ('SW1A1AA', 'E09000033', '2024-06', 2100, 2, 'flat', '2025-02-20 11:10:00', 'user', 1),
+            ('SW113DL', 'E09000033', '2024-07', 2800, 3, 'detached', '2025-02-20 11:12:00', 'user', 1),
+            ('B11AA', 'E08000025', '2024-06', 800, 1, 'flat', '2025-02-20 11:20:00', 'user', 1),
+            ('B152TT', 'E08000025', '2024-07', 1250, 3, 'semidetached', '2025-02-20 11:25:00', 'user', 1)
         ],
     )
 
     conn.executemany(
-        "INSERT INTO sales_transactions_user (postcode, area_code, time_period, price, property_type, created_at, source) "
-        "VALUES(?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO sales_transactions_user (postcode, area_code, time_period, price, property_type, created_at, source, uploader_id) "
+        "VALUES(?, ?, ?, ?, ?, ?, ?, ?)",
         [
-            ('LS12AB', 'E08000035', '2024-06', 225000, 'flat', '2025-02-21 18:00:00', 'user'),
-            ('LS63EF', 'E08000035', '2024-07', 310000, 'terraced', '2025-02-21 18:05:00', 'user'),
-            ('LS84GH', 'E08000035', '2024-08', 345000, 'semidetached', '2025-02-21 18:10:00', 'user'),
+            ('LS12AB', 'E08000035', '2024-06', 225000, 'flat', '2025-02-21 18:00:00', 'user', 1),
+            ('LS63EF', 'E08000035', '2024-07', 310000, 'terraced', '2025-02-21 18:05:00', 'user', 1),
+            ('LS84GH', 'E08000035', '2024-08', 345000, 'semidetached', '2025-02-21 18:10:00', 'user', 1),
 
-            ('M13AA', 'E08000003', '2024-06', 260000, 'flat', '2025-02-21 18:15:00', 'user'),
-            ('M146PL', 'E08000003', '2024-07', 385000, 'detached', '2025-02-21 18:20:00', 'user'),
-            ('M202WX', 'E08000003', '2024-08', 295000, 'terraced', '2025-02-21 18:25:00', 'user'),
+            ('M13AA', 'E08000003', '2024-06', 260000, 'flat', '2025-02-21 18:15:00', 'user', 1),
+            ('M146PL', 'E08000003', '2024-07', 385000, 'detached', '2025-02-21 18:20:00', 'user', 1),
+            ('M202WX', 'E08000003', '2024-08', 295000, 'terraced', '2025-02-21 18:25:00', 'user', 1),
 
-            ('B11AA', 'E08000025', '2024-06', 195000, 'flat', '2025-02-21 18:30:00', 'user'),
-            ('B152TT', 'E08000025', '2024-07', 275000, 'semidetached', '2025-02-21 18:35:00', 'user'),
-            ('B236XY', 'E08000025', '2024-08', 315000, 'detached', '2025-02-21 18:40:00', 'user'),
+            ('B11AA', 'E08000025', '2024-06', 195000, 'flat', '2025-02-21 18:30:00', 'user', 1),
+            ('B152TT', 'E08000025', '2024-07', 275000, 'semidetached', '2025-02-21 18:35:00', 'user', 1),
+            ('B236XY', 'E08000025', '2024-08', 315000, 'detached', '2025-02-21 18:40:00', 'user', 1),
 
-            ('SW1A1AA', 'E09000033', '2024-06', 720000, 'flat', '2025-02-21 18:45:00', 'user'),
-            ('SW113DL', 'E09000033', '2024-07', 980000, 'semidetached', '2025-02-21 18:50:00', 'user'),
-            ('W1D4EG', 'E09000033', '2024-08', 1250000, 'detached', '2025-02-21 18:55:00', 'user')
+            ('SW1A1AA', 'E09000033', '2024-06', 720000, 'flat', '2025-02-21 18:45:00', 'user', 1),
+            ('SW113DL', 'E09000033', '2024-07', 980000, 'semidetached', '2025-02-21 18:50:00', 'user', 1),
+            ('W1D4EG', 'E09000033', '2024-08', 1250000, 'detached', '2025-02-21 18:55:00', 'user', 1)
         ],
 
     )
@@ -277,3 +302,77 @@ def client(db_conn):
         yield c
 
     app.dependency_overrides.clear()
+
+@pytest.fixture()
+def registered_user(client):
+    payload = {
+        "username": "tester01",
+        "email": "tester01@example.com",
+        "password": "Test1234"
+    }
+    r = client.post("/auth/register", json=payload)
+    assert r.status_code == 200, r.text
+    return payload, r.json()
+
+
+@pytest.fixture()
+def auth_headers(client, registered_user):
+    payload, _ = registered_user
+    r = client.post(
+        "/auth/login",
+        data={
+            "username": payload["username"],
+            "password": payload["password"],
+        },
+    )
+    assert r.status_code == 200, r.text
+    token = r.json()["access_token"]
+    return {"Authorization": f"Bearer {token}"}
+
+@pytest.fixture()
+def second_user(client):
+    payload = {
+        "username": "tester02",
+        "email": "tester02@example.com",
+        "password": "Test2234"
+    }
+    r = client.post("/auth/register", json=payload)
+    assert r.status_code == 200, r.text
+    return payload, r.json()
+
+
+@pytest.fixture()
+def second_auth_headers(client, second_user):
+    payload, _ = second_user
+    r = client.post(
+        "/auth/login",
+        data={
+            "username": payload["username"],
+            "password": payload["password"],
+        },
+    )
+    assert r.status_code == 200, r.text
+    token = r.json()["access_token"]
+    return {"Authorization": f"Bearer {token}"}
+
+
+def latest_audit_log(conn: sqlite3.Connection):
+    row = conn.execute(
+        "SELECT * FROM audit_logs ORDER BY id DESC LIMIT 1"
+    ).fetchone()
+    return row
+
+
+def audit_logs_for(conn: sqlite3.Connection, action: str = None, resource_type: str = None):
+    sql = "SELECT * FROM audit_logs WHERE 1=1"
+    params = []
+
+    if action is not None:
+        sql += " AND action = ?"
+        params.append(action)
+    if resource_type is not None:
+        sql += " AND resource_type = ?"
+        params.append(resource_type)
+
+    sql += " ORDER BY id ASC"
+    return conn.execute(sql, tuple(params)).fetchall()
