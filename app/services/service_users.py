@@ -2,6 +2,7 @@ import sqlite3
 from datetime import datetime, timezone
 from typing import Optional, Any, Dict
 from app.schemas import NotFoundError, ConflictError
+from app.services.service_audit import log_audit_event
 
 
 def _utc_iso() -> str:
@@ -53,6 +54,21 @@ def create_user(
             """,
             (username, email, password_hash, _utc_iso()),
         )
+
+        user_id = int(cur.lastrowid)
+
+        log_audit_event(
+            conn=conn,
+            user_id=user_id,
+            action="CREATE",
+            resource_type="users",
+            resource_id=user_id,
+            detail={
+                "username": username,
+                "email": email
+            }
+        )
+
         conn.commit()
         return int(cur.lastrowid)
     except sqlite3.IntegrityError:

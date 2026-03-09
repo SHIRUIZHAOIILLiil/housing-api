@@ -1,5 +1,5 @@
 import sqlite3
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from fastapi.security import OAuth2PasswordRequestForm
 
 from app.api.deps import get_conn
@@ -8,6 +8,7 @@ from app.schemas.schema_auth import UserCreate, UserOut, TokenOut
 from app.services.service_users import create_user, get_user_by_login_key, get_user_by_id
 from app.security.password import hash_password, verify_password
 from app.security.jwt import create_access_token
+from app.services import log_audit_event
 
 
 router = APIRouter()
@@ -49,6 +50,7 @@ def api_register(
     summary="Login and get access token",
 )
 def api_login(
+    request: Request,
     form: OAuth2PasswordRequestForm = Depends(),
     conn: sqlite3.Connection = Depends(get_conn),
 ):
@@ -57,9 +59,48 @@ def api_login(
     Returns JWT bearer token.
     """
     user = get_user_by_login_key(conn, form.username)
+    request_id = getattr(request.state, "request_id", None)
 
-    if user is None or not verify_password(form.password, user["password_hash"]):
+    if user is None:
+        log_audit_event(
+            conn=conn,
+            user_id=None,
+            action="LOGIN_FAILED",
+            resource_type="auth",
+            detail={
+                "login": form.username,
+                "reason": "user not found",
+            },
+        )
+        conn.commit()
         raise UnauthorizedError("Invalid credentials")
+
+    if not verify_password(form.password, user["password_hash"]):
+        log_audit_event(
+            conn=conn,
+            user_id=int(user["id"]),
+            action="LOGIN_FAILED",
+            resource_type="auth",
+            request_id=request_id,
+            detail={
+                "login": form.username,
+                "reason": "invalid password",
+            },
+        )
+        conn.commit()
+        raise UnauthorizedError("Invalid credentials")
+
+    log_audit_event(
+        conn=conn,
+        user_id=int(user["id"]),
+        action="LOGIN_SUCCESS",
+        resource_type="auth",
+        request_id=request_id,
+        detail={
+            "login": form.username,
+        },
+    )
+    conn.commit()
 
     token = create_access_token(int(user["id"]))
     return TokenOut(access_token=token, token_type="bearer")

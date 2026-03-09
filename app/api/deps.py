@@ -8,6 +8,7 @@ from app.schemas.sales_official import (
 )
 from app.security.jwt import decode_access_token
 from app.services.service_users import get_user_by_id
+from app.schemas import UserOut
 
 from app.schemas.errors import ErrorOut, UnauthorizedError
 from fastapi.security import OAuth2PasswordBearer
@@ -110,4 +111,9 @@ def get_current_user(
     if user is None:
         raise UnauthorizedError("Invalid token")
 
-    return user
+    return UserOut(
+        id=user["id"],
+        username=user["username"],
+        email=user["email"],
+        created_at=user["created_at"],
+    )

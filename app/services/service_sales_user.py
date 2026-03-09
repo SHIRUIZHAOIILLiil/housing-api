@@ -34,6 +34,8 @@ from app.schemas.schema_sales_user import (
     YYYY_MM_RE,
 )
 from app.schemas.errors import BadRequestError, NotFoundError
+from app.schemas import UserOut
+from app.services.service_audit import log_audit_event
 
 def _utc_now_str() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
@@ -86,7 +88,8 @@ def _ensure_postcode_area_consistent(conn: sqlite3.Connection, postcode: str, ar
         raise BadRequestError("postcode and area_code mismatch for postcode_map.")
 
 
-def create_user_sale(conn: sqlite3.Connection, payload: SalesUserCreate) -> SalesUserOut:
+def create_user_sale(conn: sqlite3.Connection, payload: SalesUserCreate, user: UserOut, request_id=None) -> SalesUserOut:
+    user_id = user.id
     postcode = norm_postcode(payload.postcode)
     if not postcode:
         raise BadRequestError("postcode cannot be empty")
@@ -113,8 +116,8 @@ def create_user_sale(conn: sqlite3.Connection, payload: SalesUserCreate) -> Sale
     cur = conn.execute(
         """
         INSERT INTO sales_transactions_user
-        (postcode, area_code, time_period, price, property_type, created_at, source)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        (postcode, area_code, time_period, price, property_type, created_at, source, uploader_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             postcode,
@@ -124,14 +127,36 @@ def create_user_sale(conn: sqlite3.Connection, payload: SalesUserCreate) -> Sale
             payload.property_type,
             created_at,
             source,
+            user_id,
         ),
     )
+
+    new_id = int(cur.lastrowid)
+
+    log_audit_event(
+        conn=conn,
+        user_id=user.id,
+        action="CREATE",
+        resource_type="sales_transactions_user",
+        resource_id=new_id,
+        request_id=request_id,
+        detail={
+            "after": {
+                "postcode": postcode,
+                "area_code": area_code,
+                "time_period": time_period,
+                "price": price,
+                "property_type": payload.property_type,
+                "source": source,
+            }
+        },
+    )
+
     conn.commit()
+    return get_user_sale(conn, new_id)
 
-    return get_user_sale(conn, cur.lastrowid)
 
-
-def get_user_sale(conn: sqlite3.Connection, record_id: int) -> SalesUserOut:
+def get_user_sale(conn: sqlite3.Connection, record_id: int, ) -> SalesUserOut:
     row = conn.execute(
         """
         SELECT id, postcode, area_code, time_period, price, property_type, created_at, source
@@ -230,12 +255,13 @@ def list_user_sales(
         for r in rows
     ]
 
-def replace_user_sale(conn: sqlite3.Connection, record_id: int, payload: SalesUserCreate) -> SalesUserOut:
+def replace_user_sale(conn: sqlite3.Connection, record_id: int, payload: SalesUserCreate, user: UserOut, request_id=None) -> SalesUserOut:
     """
     PUT semantics: replace the whole resource (except server-managed created_at).
     We keep created_at unchanged.
     """
-    get_user_sale(conn, record_id)
+    current = get_user_sale(conn, record_id)
+    before = current.model_dump()
 
     postcode = norm_postcode(payload.postcode)
     if not postcode:
@@ -278,13 +304,30 @@ def replace_user_sale(conn: sqlite3.Connection, record_id: int, payload: SalesUs
             record_id,
         ),
     )
+
+    after = get_user_sale(conn, record_id)
+
+    log_audit_event(
+        conn=conn,
+        user_id=user.id,
+        action="UPDATE",
+        resource_type="sales_transactions_user",
+        resource_id=record_id,
+        request_id=request_id,
+        detail={
+            "before": before,
+            "after": after.model_dump(),
+        },
+    )
+
     conn.commit()
 
-    return get_user_sale(conn, record_id)
+    return after
 
-def patch_user_sale(conn: sqlite3.Connection, record_id: int, patch: SalesUserPatch) -> SalesUserOut:
+def patch_user_sale(conn: sqlite3.Connection, record_id: int, patch: SalesUserPatch, user: UserOut, request_id=None) -> SalesUserOut:
     # Confirmed to exist
-    _ = get_user_sale(conn, record_id)
+    current = get_user_sale(conn, record_id)
+    before = current.model_dump()
 
     fields = []
     params: list[object] = []
@@ -311,12 +354,41 @@ def patch_user_sale(conn: sqlite3.Connection, record_id: int, patch: SalesUserPa
         f"UPDATE sales_transactions_user SET {', '.join(fields)} WHERE id = ?",
         tuple(params),
     )
+    after = get_user_sale(conn, record_id)
+    log_audit_event(
+        conn=conn,
+        user_id=user.id,
+        action="UPDATE",
+        resource_type="sales_transactions_user",
+        resource_id=record_id,
+        request_id=request_id,
+        detail={
+            "before": before,
+            "after": after.model_dump(),
+        },
+    )
+
     conn.commit()
 
-    return get_user_sale(conn, record_id)
+    return after
 
 
-def delete_user_sale(conn: sqlite3.Connection, record_id: int) -> None:
-    _ = get_user_sale(conn, record_id)
+def delete_user_sale(conn: sqlite3.Connection, record_id: int, user: UserOut, request_id=None) -> None:
+    current = get_user_sale(conn, record_id)
+    before = current.model_dump()
+
     conn.execute("DELETE FROM sales_transactions_user WHERE id = ?", (record_id,))
+
+    log_audit_event(
+        conn=conn,
+        user_id=user.id,
+        action="DELETE",
+        resource_type="sales_transactions_user",
+        resource_id=record_id,
+        request_id=request_id,
+        detail={
+            "before": before,
+        },
+    )
+
     conn.commit()

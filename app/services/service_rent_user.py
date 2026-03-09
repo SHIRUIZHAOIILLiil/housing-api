@@ -33,11 +33,11 @@ from app.schemas.schema_rent_user import (
     YYYY_MM_RE,
     RentalRecordPatch
 )
-from app.schemas.errors import NotFoundError, BadRequestError
+from app.schemas import NotFoundError, BadRequestError, UnauthorizedError, UserOut
+from app.services.service_audit import log_audit_event
 
 def _utc_now_str() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
-
 
 def norm_postcode(pc: str) -> str:
     """
@@ -92,7 +92,7 @@ def _derive_area_code(conn: sqlite3.Connection, postcode: str) -> str:
     return row["area_code"]
 
 
-def create_rental_record(conn: sqlite3.Connection, payload: RentalRecordCreate) -> RentalRecordOut:
+def create_rental_record(conn: sqlite3.Connection, payload: RentalRecordCreate, user: UserOut, request_id=None) -> RentalRecordOut:
     postcode = norm_postcode(payload.postcode)
     if not postcode:
         raise BadRequestError("postcode cannot be empty")
@@ -115,8 +115,8 @@ def create_rental_record(conn: sqlite3.Connection, payload: RentalRecordCreate) 
     cur = conn.execute(
         """
         INSERT INTO rent_stats_user
-        (postcode, area_code, time_period, rent, bedrooms, property_type, created_at, source)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        (postcode, area_code, time_period, rent, bedrooms, property_type, created_at, source, uploader_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             postcode,
@@ -127,18 +127,39 @@ def create_rental_record(conn: sqlite3.Connection, payload: RentalRecordCreate) 
             payload.property_type,
             created_at,
             source,
+            user.id
         ),
     )
-    conn.commit()
 
-    new_id = cur.lastrowid
+    new_id = int(cur.lastrowid)
+    log_audit_event(
+        conn=conn,
+        user_id=user.id,
+        action="CREATE",
+        resource_type="rent_stats_user",
+        resource_id=new_id,
+        request_id=request_id,
+        detail={
+            "after": {
+                "postcode": postcode,
+                "area_code": area_code,
+                "time_period": time_period,
+                "rent": float(payload.rent),
+                "bedrooms": payload.bedrooms,
+                "property_type": payload.property_type,
+                "source": source,
+                "uploader_id": user.id,
+            }
+        },
+    )
+    conn.commit()
     return get_rental_record(conn, new_id)
 
 
 def get_rental_record(conn: sqlite3.Connection, record_id: int) -> RentalRecordOut:
     row = conn.execute(
         """
-        SELECT id, postcode, area_code, time_period, rent, bedrooms, property_type, created_at, source
+        SELECT id, postcode, area_code, time_period, rent, bedrooms, property_type, created_at, source, uploader_id
         FROM rent_stats_user
         WHERE id = ?
         """,
@@ -158,6 +179,7 @@ def get_rental_record(conn: sqlite3.Connection, record_id: int) -> RentalRecordO
         property_type=row["property_type"],
         created_at=row["created_at"],
         source=row["source"],
+        uploader_id=row["uploader_id"]
     )
 
 
@@ -197,7 +219,7 @@ def list_rental_records(
         params.append(property_type.strip())
 
     sql = """
-        SELECT id, postcode, area_code, time_period, rent, bedrooms, property_type, created_at, source
+        SELECT id, postcode, area_code, time_period, rent, bedrooms, property_type, created_at, source, uploader_id
         FROM rent_stats_user
     """
 
@@ -219,6 +241,7 @@ def list_rental_records(
             property_type=r["property_type"],
             created_at=r["created_at"],
             source=r["source"],
+            uploader_id=r["uploader_id"]
         )
         for r in rows
     ]
@@ -228,8 +251,11 @@ def _validate_update_consistency(conn: sqlite3.Connection, new_postcode: str, ne
     _ensure_area_exists(conn, new_area_code)
     _ensure_postcode_area_consistent(conn, new_postcode, new_area_code)
 
-def update_rental_record(conn: sqlite3.Connection, record_id: int, patch: RentalRecordUpdate) -> RentalRecordOut:
+def update_rental_record(conn: sqlite3.Connection, record_id: int, patch: RentalRecordUpdate, user: UserOut, request_id=None) -> RentalRecordOut:
     current = get_rental_record(conn, record_id)
+    if current.source == "user":
+        if current.uploader_id != user.id:
+            raise UnauthorizedError("You are not allowed to update rent record")
 
     fields = []
     params: list[object] = []
@@ -242,12 +268,14 @@ def update_rental_record(conn: sqlite3.Connection, record_id: int, patch: Rental
         _ensure_postcode_exists(conn, pc)
         fields.append("postcode = ?")
         params.append(pc)
+        final_postcode = pc
 
     if patch.area_code is not None:
         ac = patch.area_code.strip()
         _ensure_area_exists(conn, ac)
         fields.append("area_code = ?")
         params.append(ac)
+        final_area_code = ac
 
     if patch.postcode is not None or patch.area_code is not None:
         _validate_update_consistency(conn, final_postcode, final_area_code)
@@ -278,24 +306,64 @@ def update_rental_record(conn: sqlite3.Connection, record_id: int, patch: Rental
         raise BadRequestError("No fields provided for update.")
 
     params.append(record_id)
+
+    before = current.model_dump()
+
     conn.execute(
         f"UPDATE rent_stats_user SET {', '.join(fields)} WHERE id = ?",
         tuple(params),
     )
+
+    after = get_rental_record(conn, record_id)
+
+    log_audit_event(
+        conn=conn,
+        user_id=user.id,
+        action="UPDATE",
+        resource_type="rent_stats_user",
+        resource_id=record_id,
+        request_id=request_id,
+        detail={
+            "before": before,
+            "after": after.model_dump(),
+        },
+    )
+
     conn.commit()
 
-    return get_rental_record(conn, record_id)
+    return after
 
 
-def delete_rental_record(conn: sqlite3.Connection, record_id: int) -> None:
-    _ = get_rental_record(conn, record_id)
+def delete_rental_record(conn: sqlite3.Connection, record_id: int, user: UserOut, request_id=None) -> None:
+    current = get_rental_record(conn, record_id)
+    if current.source == "user":
+        if current.uploader_id != user.id:
+            raise UnauthorizedError("You are not allowed to update this rent record")
+
+    before = current.model_dump()
 
     conn.execute("DELETE FROM rent_stats_user WHERE id = ?", (record_id,))
+
+    log_audit_event(
+        conn=conn,
+        user_id=user.id,
+        action="DELETE",
+        resource_type="rent_stats_user",
+        resource_id=record_id,
+        request_id=request_id,
+        detail={
+            "before": before,
+        },
+    )
+
     conn.commit()
 
-def patch_rental_record(conn: sqlite3.Connection, record_id: int, patch: RentalRecordPatch) -> RentalRecordOut:
-    # First, confirm its existence (if it doesn't exist, return 404).
+
+def patch_rental_record(conn: sqlite3.Connection, record_id: int, patch: RentalRecordPatch, user: UserOut, request_id=None) -> RentalRecordOut:
     current = get_rental_record(conn, record_id)
+    if current.source == "user":
+        if current.uploader_id != user.id:
+            raise UnauthorizedError("You are not allowed to delete this rent record")
 
     fields = []
     params: list[object] = []
@@ -308,12 +376,14 @@ def patch_rental_record(conn: sqlite3.Connection, record_id: int, patch: RentalR
         _ensure_postcode_exists(conn, pc)
         fields.append("postcode = ?")
         params.append(pc)
+        final_postcode = pc
 
     if patch.area_code is not None:
         ac = patch.area_code.strip()
         _ensure_area_exists(conn, ac)
         fields.append("area_code = ?")
         params.append(ac)
+        final_postcode = ac
 
     if patch.postcode is not None or patch.area_code is not None:
         _validate_update_consistency(conn, final_postcode, final_area_code)
@@ -345,10 +415,28 @@ def patch_rental_record(conn: sqlite3.Connection, record_id: int, patch: RentalR
 
     params.append(record_id)
 
+    before = current.model_dump()
+
     conn.execute(
         f"UPDATE rent_stats_user SET {', '.join(fields)} WHERE id = ?",
         tuple(params),
     )
+
+    after = get_rental_record(conn, record_id)
+
+    log_audit_event(
+        conn=conn,
+        user_id=user.id,
+        action="UPDATE",
+        resource_type="rent_stats_user",
+        resource_id=record_id,
+        request_id=request_id,
+        detail={
+            "before": before,
+            "after": after.model_dump(),
+        },
+    )
+
     conn.commit()
 
-    return get_rental_record(conn, record_id)
+    return after

@@ -28,14 +28,15 @@ from __future__ import annotations
 
 import sqlite3
 from typing import Optional
-from fastapi import APIRouter, Depends, Response, status, Query
+from fastapi import APIRouter, Depends, Response, status, Query, Request
 
-from app.api.deps import get_conn, COMMON_ERROR_RESPONSES
-from app.schemas.schema_sales_user import (
+from app.api.deps import get_conn, COMMON_ERROR_RESPONSES, get_current_user
+from app.schemas import (
     SalesUserCreate,
     SalesUserOut,
     SalesUserListOut,
     SalesUserPatch,
+    UserOut,
 )
 from app.services.service_sales_user import (
     create_user_sale,
@@ -55,8 +56,9 @@ router = APIRouter()
     status_code=status.HTTP_201_CREATED,
     responses=COMMON_ERROR_RESPONSES
 )
-def api_create_user_sale(payload: SalesUserCreate, conn: sqlite3.Connection = Depends(get_conn)):
-    return create_user_sale(conn, payload)
+def api_create_user_sale(payload: SalesUserCreate, request: Request, conn: sqlite3.Connection = Depends(get_conn), user: UserOut = Depends(get_current_user)):
+    request_id = getattr(request.state, "request_id", None)
+    return create_user_sale(conn, payload, user, request_id)
 
 
 @router.get(
@@ -95,7 +97,7 @@ def api_list_user_sales(
         min_price=min_price,
         max_price=max_price,
         limit=limit,
-        offset=offset,
+        offset=offset
     )
     return SalesUserListOut(items=items)
 
@@ -106,10 +108,13 @@ def api_list_user_sales(
 )
 def api_put_user_sale(
     record_id: int,
+    request: Request,
     payload: SalesUserCreate,
     conn: sqlite3.Connection = Depends(get_conn),
+    user: UserOut = Depends(get_current_user)
 ):
-    return replace_user_sale(conn, record_id, payload)
+    request_id = getattr(request.state, "request_id", None)
+    return replace_user_sale(conn, record_id, payload, user, request_id)
 
 
 @router.patch(
@@ -119,10 +124,13 @@ def api_put_user_sale(
 )
 def api_patch_user_sale(
     record_id: int,
+    request: Request,
     patch: SalesUserPatch,
     conn: sqlite3.Connection = Depends(get_conn),
+    user: UserOut = Depends(get_current_user)
 ):
-    return patch_user_sale(conn, record_id, patch)
+    request_id = getattr(request.state, "request_id", None)
+    return patch_user_sale(conn, record_id, patch, user, request_id)
 
 
 @router.delete(
@@ -130,6 +138,7 @@ def api_patch_user_sale(
     status_code=status.HTTP_204_NO_CONTENT,
     responses=COMMON_ERROR_RESPONSES
 )
-def api_delete_user_sale(record_id: int, conn: sqlite3.Connection = Depends(get_conn)):
-    delete_user_sale(conn, record_id)
+def api_delete_user_sale(record_id: int, request: Request, conn: sqlite3.Connection = Depends(get_conn), user: UserOut = Depends(get_current_user)):
+    request_id = getattr(request.state, "request_id", None)
+    delete_user_sale(conn, record_id, user, request_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

@@ -26,17 +26,18 @@ Notes
 """
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Response, status, Query
+from fastapi import APIRouter, Depends, Response, status, Query, Request
 import sqlite3
 from typing import Optional
 
-from app.api.deps import get_conn, COMMON_ERROR_RESPONSES
-from app.schemas.schema_rent_user import (
+from app.api.deps import get_conn, COMMON_ERROR_RESPONSES, get_current_user
+from app.schemas import (
     RentalRecordCreate,
     RentalRecordUpdate,
     RentalRecordOut,
     RentalRecordListOut,
     RentalRecordPatch,
+    UserOut
 )
 from app.services.service_rent_user import (
     create_rental_record,
@@ -54,10 +55,16 @@ router = APIRouter()
     "",
     response_model=RentalRecordOut,
     status_code=status.HTTP_201_CREATED,
-    responses=COMMON_ERROR_RESPONSES
+    responses=COMMON_ERROR_RESPONSES,
+
 )
-def api_create_rental_record(payload: RentalRecordCreate, conn: sqlite3.Connection = Depends(get_conn)):
-    return create_rental_record(conn, payload)
+def api_create_rental_record(payload: RentalRecordCreate,
+                             request: Request,
+                             conn: sqlite3.Connection = Depends(get_conn),
+                             user: UserOut = Depends(get_current_user),
+                             ):
+    request_id = getattr(request.state, "request_id", None)
+    return create_rental_record(conn, payload, user, request_id)
 
 
 @router.get(
@@ -104,10 +111,13 @@ def api_list_rental_records(
 )
 def api_update_rental_record(
     record_id: int,
+    request: Request,
     patch: RentalRecordUpdate,
     conn: sqlite3.Connection = Depends(get_conn),
+    user: UserOut = Depends(get_current_user)
 ):
-    return update_rental_record(conn, record_id, patch)
+    request_id = getattr(request.state, "request_id", None)
+    return update_rental_record(conn, record_id, patch, user, request_id)
 
 
 @router.patch(
@@ -117,16 +127,23 @@ def api_update_rental_record(
 )
 def api_patch_rental_record(
     record_id: int,
+    request: Request,
     patch: RentalRecordPatch,
     conn: sqlite3.Connection = Depends(get_conn),
+    user: UserOut = Depends(get_current_user)
 ):
-    return patch_rental_record(conn, record_id, patch)
+    request_id = getattr(request.state, "request_id", None)
+    return patch_rental_record(conn, record_id, patch, user, request_id)
 
 @router.delete(
     "/{record_id}",
     status_code=status.HTTP_204_NO_CONTENT,
     responses=COMMON_ERROR_RESPONSES
 )
-def api_delete_rental_record(record_id: int, conn: sqlite3.Connection = Depends(get_conn)):
-    delete_rental_record(conn, record_id)
+def api_delete_rental_record(record_id: int,
+                             request: Request,
+                             conn: sqlite3.Connection = Depends(get_conn),
+                             user: UserOut = Depends(get_current_user)):
+    request_id = getattr(request.state, "request_id", None)
+    delete_rental_record(conn, record_id, user, request_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

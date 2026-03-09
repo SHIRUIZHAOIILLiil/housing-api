@@ -2,7 +2,7 @@ import uvicorn
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
-from app.core.config import Settings
+from app.core import Settings, RequestLoggingMiddleware, setup_logging
 from app.api.routers import router_areas, router_rent, router_postcode_map, router_sales_official, router_rent_user, router_sales_user, router_auth
 from app.schemas.errors import AppError
 
@@ -16,6 +16,9 @@ def create_app() -> FastAPI:
     @app.exception_handler(AppError)
     def app_error_handler(request: Request, exc: AppError):
         return JSONResponse(status_code=exc.status_code, content={"detail": exc.message})
+
+    setup_logging()
+    app.add_middleware(RequestLoggingMiddleware)
 
     app.include_router(router_areas.router, prefix="/areas", tags=["areas"])
     app.include_router(router_postcode_map.router, prefix="/postcode_map", tags=["postcode_map"])

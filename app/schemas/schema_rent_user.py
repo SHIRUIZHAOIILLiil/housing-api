@@ -40,6 +40,7 @@ class RentalRecordUpdate(BaseModel):
 class RentalRecordOut(RentalRecordBase):
     id: int
     created_at: str
+    uploader_id: int
 
 class RentalRecordListOut(BaseModel):
     items: list[RentalRecordOut]

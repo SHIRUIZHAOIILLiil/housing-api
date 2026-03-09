@@ -65,312 +65,149 @@ def file_loader(settings: Settings):
 
 def init_schema(conn: sqlite3.Connection):
     conn.executescript("""
-                       CREATE TABLE IF NOT EXISTS areas
-                       (
-                           area_code
-                           TEXT
-                           PRIMARY
-                           KEY,
-                           area_name
-                           TEXT
-                       );
-
-                       CREATE TABLE IF NOT EXISTS postcode_map
-                       (
-                           postcode
-                           TEXT
-                           PRIMARY
-                           KEY,
-                           area_code
-                           TEXT
-                           NOT
-                           NULL,
-                           FOREIGN
-                           KEY
-                       (
-                           area_code
-                       ) REFERENCES areas
-                       (
-                           area_code
-                       )
-                           ON UPDATE CASCADE
-                           ON DELETE RESTRICT
-                           );
-
-                       CREATE INDEX IF NOT EXISTS idx_postcode_map_area_code
-                           ON postcode_map(area_code);
-
-                       CREATE TABLE IF NOT EXISTS rent_stats_official
-                       (
-                           time_period
-                           TEXT
-                           NOT
-                           NULL,
-                           area_code
-                           TEXT
-                           NOT
-                           NULL,
-                           region_or_country_name
-                           TEXT
-                           NOT
-                           NULL,
-
-                           index_value
-                           REAL,
-                           annual_change
-                           REAL,
-                           rental_price
-                           REAL,
-                           index_one_bed
-                           REAL,
-                           rental_price_one_bed
-                           REAL,
-                           index_two_bed
-                           REAL,
-                           rental_price_two_bed
-                           REAL,
-                           index_three_bed
-                           REAL,
-                           rental_price_three_bed
-                           REAL,
-                           rental_price_detached
-                           REAL,
-                           rental_price_semidetached
-                           REAL,
-                           rental_price_terraced
-                           REAL,
-                           rental_price_flat_maisonette
-                           REAL,
-
-                           PRIMARY
-                           KEY
-                       (
-                           time_period,
-                           area_code
-                       ),
-                           FOREIGN KEY
-                       (
-                           area_code
-                       )
-                           REFERENCES areas
-                       (
-                           area_code
-                       )
-                           ON UPDATE CASCADE
-                           ON DELETE RESTRICT
-                           );
-                       CREATE INDEX IF NOT EXISTS idx_rent_area_time ON rent_stats_official(area_code, time_period);
+                        CREATE TABLE IF NOT EXISTS areas (
+                            area_code  TEXT PRIMARY KEY,
+                            area_name  TEXT
+                        );
 
 
-                       CREATE TABLE IF NOT EXISTS sales_transactions_official
-                       (
-                           transaction_uuid
-                           TEXT
-                           PRIMARY
-                           KEY,
-                           price
-                           REAL
-                           NOT
-                           NULL,
-                           transaction_date
-                           TEXT
-                           NOT
-                           NULL,
-                           postcode
-                           TEXT,
-                           property_type
-                           TEXT
-                           CHECK (
-                           property_type
-                           IS
-                           NULL
-                           OR
-                           property_type
-                           IN
-                       (
-                           'F',
-                           'D',
-                           'S',
-                           'T',
-                           'O'
-                       )),
-                           new_build INTEGER CHECK
-                       (
-                           new_build
-                           IS
-                           NULL
-                           OR
-                           new_build
-                           IN
-                       (
-                           0,
-                           1
-                       )),
-                           tenure TEXT CHECK
-                       (
-                           tenure
-                           IS
-                           NULL
-                           OR
-                           tenure
-                           IN
-                       (
-                           'L',
-                           'F'
-                       )),
-                           paon TEXT,
-                           saon TEXT,
-                           FOREIGN KEY
-                       (
-                           postcode
-                       )
-                           REFERENCES postcode_map
-                       (
-                           postcode
-                       )
-                           ON UPDATE CASCADE
-                           ON DELETE RESTRICT
-                           );
+                        CREATE TABLE IF NOT EXISTS postcode_map (
+                            postcode   TEXT PRIMARY KEY,
+                            area_code  TEXT NOT NULL,
+                            FOREIGN KEY (area_code)
+                                REFERENCES areas(area_code)
+                                ON UPDATE CASCADE
+                                ON DELETE RESTRICT
+                        );
 
-                       CREATE TABLE IF NOT EXISTS sales_fk_rejects
-                       (
-                           transaction_uuid
-                           TEXT
-                           PRIMARY
-                           KEY,
-                           postcode
-                           TEXT,
-                           reason
-                           TEXT
-                       );
+                        CREATE INDEX IF NOT EXISTS idx_postcode_map_area_code
+                            ON postcode_map (area_code);
 
-                       CREATE INDEX IF NOT EXISTS idx_sales_fk_rejects_reason ON sales_fk_rejects(reason);
+                        CREATE TABLE IF NOT EXISTS rent_stats_official (
+                            time_period TEXT NOT NULL,
+                            area_code TEXT NOT NULL,
+                            region_or_country_name TEXT NOT NULL,
+                        
+                            index_value REAL,
+                            annual_change REAL,
+                            rental_price REAL,
+                        
+                            index_one_bed REAL,
+                            rental_price_one_bed REAL,
+                        
+                            index_two_bed REAL,
+                            rental_price_two_bed REAL,
+                        
+                            index_three_bed REAL,
+                            rental_price_three_bed REAL,
+                        
+                            rental_price_detached REAL,
+                            rental_price_semidetached REAL,
+                            rental_price_terraced REAL,
+                            rental_price_flat_maisonette REAL,
+                        
+                            PRIMARY KEY (time_period, area_code),
+                        
+                            FOREIGN KEY (area_code)
+                                REFERENCES areas(area_code)
+                                ON UPDATE CASCADE
+                                ON DELETE RESTRICT
+                        );
+                        CREATE INDEX IF NOT EXISTS idx_rent_area_time
+                            ON rent_stats_official (area_code, time_period);
 
-                       CREATE TABLE IF NOT EXISTS rent_stats_user
-                       (
-                           id
-                           INTEGER
-                           PRIMARY
-                           KEY
-                           AUTOINCREMENT,
-                           postcode
-                           TEXT,
-                           area_code
-                           TEXT,
-                           time_period
-                           TEXT
-                           NOT
-                           NULL,
-                           rent
-                           REAL
-                           NOT
-                           NULL,
-                           bedrooms
-                           INTEGER,
-                           property_type
-                           TEXT,
-                           created_at
-                           TEXT,
-                           source
-                           TEXT
-                           DEFAULT
-                           'user'
-                           CHECK (
-                           source
-                           IN
-                       (
-                           'user',
-                           'survey',
-                           'partner'
-                       )),
-                           FOREIGN KEY
-                       (
-                           postcode
-                       )
-                           REFERENCES postcode_map
-                       (
-                           postcode
-                       )
-                           ON UPDATE CASCADE
-                           ON DELETE RESTRICT,
-                           FOREIGN KEY
-                       (
-                           area_code
-                       )
-                           REFERENCES areas
-                       (
-                           area_code
-                       )
-                           ON UPDATE CASCADE
-                           ON DELETE RESTRICT
+                        CREATE TABLE IF NOT EXISTS sales_transactions_official (
+                            transaction_uuid  TEXT PRIMARY KEY,
+                        
+                            price             REAL NOT NULL,            
+                            transaction_date  TEXT    NOT NULL,              
+                        
+                            postcode          TEXT,
+                            property_type     TEXT CHECK (
+                                property_type IS NULL OR property_type IN ('F','D','S','T','O')
+                            ),
+                            new_build         INTEGER CHECK (
+                                new_build IS NULL OR new_build IN (0, 1)
+                            ),
+                            tenure            TEXT CHECK (
+                                tenure IS NULL OR tenure IN ('L','F')
+                            ),
+                        
+                            paon              TEXT,
+                            saon              TEXT,
+                        
+                            FOREIGN KEY (postcode)
+                                REFERENCES postcode_map(postcode)
+                                ON UPDATE CASCADE
+                                ON DELETE RESTRICT
+                        );
+                        
+                        CREATE INDEX IF NOT EXISTS idx_sales_official_date
+                            ON sales_transactions_official (transaction_date);
+                        
+                        CREATE INDEX IF NOT EXISTS idx_sales_official_postcode
+                            ON sales_transactions_official (postcode);
+                        
+                        CREATE INDEX IF NOT EXISTS idx_sales_official_filters_date
+                            ON sales_transactions_official (property_type, new_build, tenure, transaction_date);
+                        
 
-                           );
-                       CREATE TABLE IF NOT EXISTS sales_transactions_user
-                       (
-                           id
-                           INTEGER
-                           PRIMARY
-                           KEY
-                           AUTOINCREMENT,
-                           postcode
-                           TEXT,
-                           area_code
-                           TEXT,
-                           time_period
-                           TEXT
-                           NOT
-                           NULL,
-                           price
-                           REAL
-                           NOT
-                           NULL,
-                           property_type
-                           TEXT,
-                           created_at
-                           TEXT,
-                           source
-                           TEXT
-                           DEFAULT
-                           'user'
-                           CHECK (
-                           source
-                           IN
-                       (
-                           'user',
-                           'survey',
-                           'partner'
-                       )),
-                           FOREIGN KEY
-                       (
-                           postcode
-                       )
-                           REFERENCES postcode_map
-                       (
-                           postcode
-                       )
-                           ON UPDATE CASCADE
-                           ON DELETE RESTRICT,
-                           FOREIGN KEY
-                       (
-                           area_code
-                       )
-                           REFERENCES areas
-                       (
-                           area_code
-                       )
-                           ON UPDATE CASCADE
-                           ON DELETE RESTRICT
+                        CREATE TABLE IF NOT EXISTS sales_fk_rejects (
+                            transaction_uuid TEXT PRIMARY KEY,
+                            postcode         TEXT,
+                            reason           TEXT
+                        );
 
+                        CREATE INDEX IF NOT EXISTS idx_sales_fk_rejects_reason ON sales_fk_rejects(reason);
 
-                           );
-                       CREATE INDEX IF NOT EXISTS idx_sales_postcode ON sales_transactions_official(postcode);
-                       CREATE INDEX IF NOT EXISTS idx_sales_date ON sales_transactions_official(transaction_date);
-
-
+                        CREATE TABLE IF NOT EXISTS rent_stats_user (
+                            id            INTEGER PRIMARY KEY AUTOINCREMENT,
+                            postcode      TEXT,
+                            area_code     TEXT,
+                            time_period   TEXT NOT NULL,
+                            rent          REAL NOT NULL,
+                            bedrooms      INTEGER,
+                            property_type TEXT,
+                            created_at    TEXT,
+                            source        TEXT DEFAULT 'user'
+                                CHECK (source IN ('user', 'survey', 'partner')),
+                            uploader_id   INTEGER,
+                        
+                            FOREIGN KEY (postcode)
+                                REFERENCES postcode_map (postcode)
+                                ON UPDATE CASCADE
+                                ON DELETE RESTRICT,
+                        
+                            FOREIGN KEY (area_code)
+                                REFERENCES areas (area_code)
+                                ON UPDATE CASCADE
+                                ON DELETE RESTRICT
+                        );
+                            
+                        CREATE TABLE IF NOT EXISTS sales_transactions_user (
+                            id            INTEGER PRIMARY KEY AUTOINCREMENT,
+                            postcode      TEXT,
+                            area_code     TEXT,
+                            time_period   TEXT NOT NULL,
+                            price         REAL NOT NULL,
+                            property_type TEXT,
+                            created_at    TEXT,
+                            source        TEXT DEFAULT 'user'
+                                CHECK (source IN ('user', 'survey', 'partner')),
+                            uploader_id   INTEGER,
+                        
+                            FOREIGN KEY (postcode)
+                                REFERENCES postcode_map (postcode)
+                                ON UPDATE CASCADE
+                                ON DELETE RESTRICT,
+                        
+                            FOREIGN KEY (area_code)
+                                REFERENCES areas (area_code)
+                                ON UPDATE CASCADE
+                                ON DELETE RESTRICT
+                        );
 
                        """)
-
-
 
     conn.commit()
 
@@ -470,8 +307,6 @@ def generate_hmlr_table(filepath: list, conn: sqlite3.Connection):
 
             df_hmlr["postcode"] = df_hmlr["postcode"].map(norm_postcode)
             df_hmlr = df_hmlr.dropna(subset=["postcode"])
-
-
 
             bad_mask = ~df_hmlr["postcode"].isin(valid_pc)
 
