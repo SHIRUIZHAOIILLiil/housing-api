@@ -1,7 +1,7 @@
 import sqlite3
 from datetime import datetime, timezone
-from typing import Optional, Any, Dict
-from app.schemas import NotFoundError, ConflictError
+from typing import Optional
+from app.schemas import ConflictError
 from app.services.service_audit import log_audit_event
 
 
