@@ -9,11 +9,16 @@ BASE_DIR = Path(__file__).resolve().parents[2]
 ENV_FILE = BASE_DIR / ".env"
 
 class Settings(BaseSettings):
+
+    JWT_SECRET: str = "dev-secret"
+    JWT_ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
+
     model_config = SettingsConfigDict(
         env_file=str(ENV_FILE),
         env_file_encoding="utf-8",
         case_sensitive=False,
-        extra='ignore'
+        extra='ignore',
     )
 
     DEBUG: bool = True
