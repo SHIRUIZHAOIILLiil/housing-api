@@ -7,16 +7,96 @@ into the UK housing market by integrating HM Land Registry(England and Wales) an
 The API supports full CRUD operations on housing transactions and locations,
 and exposes additional analytical endpoints for regional price trends,
 median prices, and affordability indicators.
+
+The API supports:
+
+- official housing statistics
+- user-submitted rental and sales records
+- authentication with JWT
+- analytical endpoints for trends and aggregated metrics
 ## 2. Features
+- RESTful API design following HTTP conventions
+- Integration of UK housing datasets (ONS and HM Land Registry)
+- Official housing statistics endpoints
+- User-submitted rental and sales records (full CRUD)
+- JWT-based authentication system
+- Filtering and search capabilities
+- Analytical endpoints for housing price trends
+- Time-series rental statistics by area
+- Postcode → area mapping
+- Automated test suite using Pytest
+- CI/CD pipeline with GitHub Actions
+- Cloud deployment on Render
 ## 3. Tech Stack
 - Language: Python 3.13
 - Framework: FastAPI
 - Database: Sqlite
 - ORM SQLALchemy
 - API Documentation: Swagger / OpenAPI
+- Pydantic
+- Pytest
+- Uvicorn
+- Render (deployment)
 ## 4. Project Structure
+```
+housing-api/
+│
+├── app/
+│   ├── api/
+│   │   ├── routers/        # API endpoints
+│   │   └── deps.py         # shared dependencies
+│   │
+│   ├── security/           # JWT authentication
+│   ├── services/           # business logic
+│   ├── schemas/            # Pydantic models
+│   └── main.py             # FastAPI application entry
+│
+├── tests/                  # pytest test suite
+│
+├── requirements.txt
+├── README.md
+└── .github/workflows       # CI pipeline
+```
+
+The project follows a layered architecture:
+
+- Router layer → handles HTTP requests
+- Service layer → contains business logic
+- Schema layer → defines request and response models
+- Security layer → manages authentication and authorization
 ## 5. Setup & Installation
+Clone the repository:
+
+```bash
+https://github.com/SHIRUIZHAOIILLiil/housing-api.git
+cd housing-api
+pip install -r requirements.txt
+
+Set environment variables:
+export JWT_SECRET=your_secret_key
+PORT=YOUR_PORT
+HOST=YOUR_HOST
+
+If you want to use full dataset of the system, set environment variables:
+DATAPATH=Your_DATA_PATH
+```
 ## 6. Running the Project
+Start the FastAPI server:
+
+```
+uvicorn app.main:app --reload
+http://HOST:PORT
+
+Interactive API documentation:
+http://HOST:PORT/docs
+```
+## 7. Deployment
+```
+The API is deployed on Render:
+https://housing-api-p0jk.onrender.com/
+Interactive API documentation:
+https://housing-api-p0jk.onrender.com/docs#/
+```
 ## 7. API Documentation
 ### 7.1 Areas
 - GET /areas
@@ -208,8 +288,39 @@ median prices, and affordability indicators.
 - National Statistics Postcode Lookup
   - URL: https://geoportal.statistics.gov.uk/datasets/8a1d5b58df824b2e86fe07ddfdd87165/about 
 ## 10. Testing
+This project includes an automated test suite built with Pytest.
+
+Run tests with:
+
+```bash
+pytest
+```
+The test suite covers:
+- API endpoints 
+- CRUD operations 
+- authentication 
+- error handling
 ## 11. Limitations & Future Work
+Current limitations include:
+
+- SQLite limits scalability for large datasets
+- limited caching for analytical queries
+- basic authentication without role-based access control
+
+Future improvements may include:
+
+- migration to PostgreSQL
+- caching for frequently accessed analytics
+- advanced authentication and user roles
 ## 12. GenAI Usage Declaration
+Generative AI tools (ChatGPT) were used to assist with:
+
+- debugging Python and FastAPI errors
+- improving API documentation structure
+- reviewing database design
+- generating test case ideas
+
+All generated suggestions were reviewed, tested and integrated manually.
 ## 13. Author
 Shirui Zhao
 
