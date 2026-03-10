@@ -23,7 +23,7 @@ COMMON_ERROR_RESPONSES = {
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
 def get_conn() -> Generator[sqlite3.Connection, None, None]:
-    conn = sqlite3.connect(settings.DATABASE)
+    conn = sqlite3.connect(settings.DATABASE_DEMO) # For full use, change it as settings.DATABASE
     conn.row_factory = sqlite3.Row
     try:
         yield conn

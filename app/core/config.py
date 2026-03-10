@@ -28,6 +28,7 @@ class Settings(BaseSettings):
     PORT: int = 4444
     DATAPATH: str = "data"
     DATABASE: str = os.path.join(BASE_DIR, "data", "housing.db")
+    DATABASE_DEMO: str = os.path.join(BASE_DIR, "data", "housing_demo.db")
 
     NAME: list[str] = ['NSPL_NOV_2025_UK.csv',
             'pp-complete-2020.csv',
