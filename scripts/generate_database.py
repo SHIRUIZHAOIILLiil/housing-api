@@ -378,6 +378,9 @@ def demo_db():
     create_table_users(conn)
     demo_data(conn)
 
+    conn.commit()
+    conn.close()
+
 def demo_data(conn: sqlite3.Connection):
     conn.executemany(
         "INSERT INTO areas(area_code, area_name) VALUES (?, ?)",
