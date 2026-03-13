@@ -237,10 +237,14 @@ All final code, design decisions, and written content were reviewed, adapted, an
 Examples of exported conversation logs are provided as supplementary material in line with the coursework requirements.
 
 All generated suggestions were reviewed, tested and integrated manually.
-## 14 API documentation PDF Reference
+## 14. API documentation PDF Reference
 - Machine-readable OpenAPI specification: ```/docs/openapi_v2.json```
 - Human-readable API documentation PDF: ```/docs/Housing-API.pdf```
-## 15. Author
+## 15. Technical Report and Presentation Slide
+- Technical Report: ```/docs/Housing-API-technical-report```
+- Slides: ```/docs/Housing-API-slides.pdf``` or ```/docs/Housing-API.pptx```
+
+## 16. Author
 Shirui Zhao
 
 University of Leeds
