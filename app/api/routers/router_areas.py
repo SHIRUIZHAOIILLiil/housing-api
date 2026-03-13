@@ -20,6 +20,7 @@ Notes
 
 import sqlite3
 from fastapi import APIRouter, Depends, Query
+from typing import Optional
 
 from app.api.deps import get_conn, COMMON_ERROR_RESPONSES
 from app.services.service_area import list_areas, get_area, area_exists
@@ -31,7 +32,7 @@ router = APIRouter()
 
 @router.get("", response_model=list[AreaOut], responses=COMMON_ERROR_RESPONSES)
 def api_list_areas(
-    q: str | None = Query(default=None, description="Fuzzy search by area name"),
+    q: Optional[str] = Query(default=None, description="Fuzzy search by area name"),
     limit: int = Query(default=50, ge=1, le=200),
     conn: sqlite3.Connection = Depends(get_conn),
 ):
