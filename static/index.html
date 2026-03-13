@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Housing API Demo Client</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <h1>Housing API Demo Client</h1>
+      <p>Frontend for your Leeds COMP3011 housing market and rental insights API</p>
+    </div>
+  </header>
+
+<main class="page">
+  <section class="card-rail-section">
+    <div class="section-header">
+      <h2>API Actions</h2>
+      <p>Scroll horizontally to access different features of the Housing API demo client.</p>
+    </div>
+
+    <div class="card-rail">
+      <section class="panel rail-card">
+        <h3>Connection</h3>
+
+        <label for="baseUrl">API Base URL</label>
+        <input id="baseUrl" type="text" value="http://127.0.0.1:4444" />
+
+        <label for="token">Bearer Token</label>
+        <textarea id="token" rows="4" placeholder="JWT token will appear here after login"></textarea>
+
+        <button id="saveConfigBtn">Save Config</button>
+        <button id="clearTokenBtn" type="button" class="secondary-btn">Clear Token</button>
+      </section>
+
+      <section class="panel rail-card">
+        <h3>Register</h3>
+
+        <label for="registerUsername">Username</label>
+        <input id="registerUsername" type="text" placeholder="e.g. shirui_zh" />
+
+        <label for="registerEmail">Email</label>
+        <input id="registerEmail" type="email" placeholder="e.g. s.zhao@example.com" />
+
+        <label for="registerPassword">Password</label>
+        <input id="registerPassword" type="password" placeholder="Create a password" />
+
+        <button id="registerBtn">Register</button>
+      </section>
+
+      <section class="panel rail-card">
+        <h3>Login</h3>
+
+        <label for="loginUsername">Username or Email</label>
+        <input id="loginUsername" type="text" placeholder="username or email" />
+
+        <label for="loginPassword">Password</label>
+        <input id="loginPassword" type="password" placeholder="password" />
+
+        <button id="loginBtn">Login and Save Token</button>
+      </section>
+
+      <section class="panel rail-card">
+        <h3>Area Lookup</h3>
+
+        <label for="areaCode">Area Code</label>
+        <input id="areaCode" type="text" placeholder="e.g. E08000035" />
+        <button id="getAreaBtn">Get Area</button>
+
+        <label for="areaQuery">Search Areas by Name</label>
+        <input id="areaQuery" type="text" placeholder="e.g. Leeds" />
+
+        <label for="areaLimit">Limit</label>
+        <input id="areaLimit" type="number" value="10" min="1" max="200" />
+        <button id="searchAreasBtn">Search Areas</button>
+      </section>
+
+      <section class="panel rail-card">
+        <h3>Postcode Lookup</h3>
+
+        <label for="postcodeExact">Exact Postcode</label>
+        <input id="postcodeExact" type="text" placeholder="e.g. LS1 1AA" />
+        <button id="postcodeExactBtn">Get Postcode Mapping</button>
+
+        <label for="postcodeQuery">Fuzzy Postcode Search</label>
+        <input id="postcodeQuery" type="text" placeholder="e.g. LS1" />
+
+        <label for="postcodeLimit">Limit</label>
+        <input id="postcodeLimit" type="number" value="10" min="1" max="200" />
+        <button id="postcodeSearchBtn">Search Postcodes</button>
+      </section>
+
+      <section class="panel rail-card">
+        <h3>Official Rent Stats</h3>
+
+        <label for="rentAreaCode">Area Code</label>
+        <input id="rentAreaCode" type="text" placeholder="e.g. E08000035" />
+
+        <label for="rentTimePeriod">Time Period</label>
+        <input id="rentTimePeriod" type="text" placeholder="e.g. 2024-01" />
+        <button id="rentPointBtn">Get Rent Stats (Point)</button>
+
+        <label for="rentFrom">From</label>
+        <input id="rentFrom" type="text" placeholder="e.g. 2023-01" />
+
+        <label for="rentTo">To</label>
+        <input id="rentTo" type="text" placeholder="e.g. 2024-12" />
+
+        <button id="rentSeriesBtn">Get Rent Stats Series</button>
+        <button id="rentLatestBtn">Get Latest Rent Stats</button>
+        <button id="rentAvailabilityBtn">Get Rent Availability</button>
+          <hr />
+
+<label for="rentMetric">Trend Metric</label>
+<select id="rentMetric">
+  <option value="rental_price">rental_price</option>
+  <option value="index_value">index_value</option>
+  <option value="annual_change">annual_change</option>
+</select>
+
+<label for="rentBedroomsTrend">Trend Bedrooms</label>
+<select id="rentBedroomsTrend">
+  <option value="overall">overall</option>
+  <option value="1">1</option>
+  <option value="2">2</option>
+  <option value="3">3</option>
+</select>
+
+<button id="rentTrendByCodeBtn">Get Rent Trend PNG (by Area Code)</button>
+
+<label for="rentAreaNameTrend">Area Name</label>
+<input id="rentAreaNameTrend" type="text" placeholder="e.g. Leeds" />
+
+<button id="rentTrendByNameBtn">Get Rent Trend PNG (by Area Name)</button>
+      </section>
+
+<section class="panel rail-card">
+  <h3>Official Sales Stats</h3>
+
+  <label for="salesAreaCode">Area Code</label>
+  <input id="salesAreaCode" type="text" placeholder="e.g. E08000035" />
+
+  <label for="salesTimePeriod">Time Period</label>
+  <input id="salesTimePeriod" type="text" placeholder="e.g. 2024-01" />
+
+  <label for="salesPropertyType">Property Type</label>
+  <select id="salesPropertyType">
+    <option value="">Any</option>
+    <option value="D">D - Detached</option>
+    <option value="S">S - Semi-detached</option>
+    <option value="T">T - Terraced</option>
+    <option value="F">F - Flat</option>
+    <option value="O">O - Other</option>
+  </select>
+
+  <label for="salesNewBuild">New Build</label>
+  <select id="salesNewBuild">
+    <option value="">Any</option>
+    <option value="true">true</option>
+    <option value="false">false</option>
+  </select>
+
+  <label for="salesTenure">Tenure</label>
+  <select id="salesTenure">
+    <option value="">Any</option>
+    <option value="F">F - Freehold</option>
+    <option value="L">L - Leasehold</option>
+    <option value="U">U - Unknown/Other</option>
+  </select>
+
+  <button id="salesPointBtn">Get Sales Stats (Point)</button>
+
+  <label for="salesDateFrom">Date From</label>
+  <input id="salesDateFrom" type="text" placeholder="e.g. 2023-01" />
+
+  <label for="salesDateTo">Date To</label>
+  <input id="salesDateTo" type="text" placeholder="e.g. 2024-12" />
+
+  <button id="salesSeriesBtn">Get Sales Stats Series</button>
+  <button id="salesLatestBtn">Get Latest Sales Stats</button>
+  <button id="salesAvailabilityBtn">Get Sales Availability</button>
+</section>
+        <section class="panel rail-card">
+  <h3>Official Sales Transactions</h3>
+
+  <label for="officialSalesAreaCode">Area Code</label>
+  <input id="officialSalesAreaCode" type="text" placeholder="e.g. E08000035" />
+
+  <label for="officialSalesPostcode">Postcode</label>
+  <input id="officialSalesPostcode" type="text" placeholder="e.g. LS1 1AA" />
+
+  <label for="officialSalesUuid">Transaction UUID</label>
+  <input id="officialSalesUuid" type="text" placeholder="full UUID" />
+
+  <label for="officialSalesDateFrom">Date From</label>
+  <input id="officialSalesDateFrom" type="text" placeholder="e.g. 2023-01-01" />
+
+  <label for="officialSalesDateTo">Date To</label>
+  <input id="officialSalesDateTo" type="text" placeholder="e.g. 2024-12-31" />
+
+  <label for="officialSalesMinPrice">Min Price</label>
+  <input id="officialSalesMinPrice" type="number" placeholder="optional" />
+
+  <label for="officialSalesMaxPrice">Max Price</label>
+  <input id="officialSalesMaxPrice" type="number" placeholder="optional" />
+
+  <label for="officialSalesPropertyType">Property Type</label>
+  <select id="officialSalesPropertyType">
+    <option value="">Any</option>
+    <option value="D">D - Detached</option>
+    <option value="S">S - Semi-detached</option>
+    <option value="T">T - Terraced</option>
+    <option value="F">F - Flat</option>
+    <option value="O">O - Other</option>
+  </select>
+
+  <label for="officialSalesNewBuild">New Build</label>
+  <select id="officialSalesNewBuild">
+    <option value="">Any</option>
+    <option value="true">true</option>
+    <option value="false">false</option>
+  </select>
+
+  <label for="officialSalesTenure">Tenure</label>
+  <select id="officialSalesTenure">
+    <option value="">Any</option>
+    <option value="F">F - Freehold</option>
+    <option value="L">L - Leasehold</option>
+    <option value="U">U - Unknown/Other</option>
+  </select>
+
+  <label for="officialSalesLimit">Limit</label>
+  <input id="officialSalesLimit" type="number" value="50" min="1" max="200" />
+
+  <label for="officialSalesOffset">Offset</label>
+  <input id="officialSalesOffset" type="number" value="0" min="0" />
+
+  <label for="officialSalesSortBy">Sort By</label>
+  <select id="officialSalesSortBy">
+    <option value="transaction_date">transaction_date</option>
+    <option value="price">price</option>
+  </select>
+
+  <label for="officialSalesOrder">Order</label>
+  <select id="officialSalesOrder">
+    <option value="desc">desc</option>
+    <option value="asc">asc</option>
+  </select>
+
+  <label for="officialSalesIncludeTotal">Include Total</label>
+  <select id="officialSalesIncludeTotal">
+    <option value="false">false</option>
+    <option value="true">true</option>
+  </select>
+
+  <button id="officialSalesByAreaBtn">List by Area</button>
+  <button id="officialSalesByPostcodeBtn">List by Postcode</button>
+  <button id="officialSalesByUuidBtn">Get by UUID</button>
+</section>
+
+      <section class="panel rail-card">
+        <h3>Create Rent Record</h3>
+
+        <label for="userRentPostcode">Postcode</label>
+        <input id="userRentPostcode" type="text" placeholder="e.g. LS1 1AA" />
+
+        <label for="userRentAreaCode">Area Code</label>
+        <input id="userRentAreaCode" type="text" placeholder="optional" />
+
+        <label for="userRentTimePeriod">Time Period</label>
+        <input id="userRentTimePeriod" type="text" placeholder="e.g. 2024-07" />
+
+        <label for="userRentValue">Rent</label>
+        <input id="userRentValue" type="number" step="0.01" placeholder="e.g. 1200" />
+
+        <label for="userRentBedrooms">Bedrooms</label>
+        <input id="userRentBedrooms" type="number" placeholder="e.g. 2" />
+
+        <label for="userRentPropertyType">Property Type</label>
+        <select id="userRentPropertyType">
+          <option value="">Any</option>
+          <option value="flat">flat</option>
+          <option value="terraced">terraced</option>
+          <option value="semidetached">semidetached</option>
+          <option value="detached">detached</option>
+          <option value="other">other</option>
+        </select>
+
+        <label for="userRentSource">Source</label>
+        <select id="userRentSource">
+          <option value="user">user</option>
+          <option value="survey">survey</option>
+          <option value="partner">partner</option>
+        </select>
+
+        <button id="createRentRecordBtn">Create Rent Record</button>
+      </section>
+
+      <section class="panel rail-card">
+        <h3>Manage Rent Records</h3>
+
+        <label for="listRentAreaCode">Filter by Area Code</label>
+        <input id="listRentAreaCode" type="text" placeholder="optional" />
+
+        <label for="listRentTimePeriod">Filter by Time Period</label>
+        <input id="listRentTimePeriod" type="text" placeholder="optional" />
+
+        <label for="listRentLimit">Limit</label>
+        <input id="listRentLimit" type="number" value="10" min="1" max="200" />
+
+        <button id="listRentRecordsBtn">List Rent Records</button>
+
+        <hr />
+
+        <label for="rentRecordId">Record ID</label>
+        <input id="rentRecordId" type="number" placeholder="e.g. 1" />
+
+        <button id="getRentRecordBtn">Get One Record</button>
+          <button id="putRentRecordBtn">Replace Record (PUT)</button>
+<button id="patchRentRecordBtn">Patch Record (PATCH)</button>
+        <button id="deleteRentRecordBtn" class="secondary-btn">Delete Record</button>
+      </section>
+
+          <section class="panel rail-card">
+  <h3>Create Sales Transaction</h3>
+
+  <label for="userSalePostcode">Postcode</label>
+  <input id="userSalePostcode" type="text" placeholder="e.g. LS1 1AA" />
+
+  <label for="userSaleAreaCode">Area Code</label>
+  <input id="userSaleAreaCode" type="text" placeholder="optional" />
+
+  <label for="userSaleTimePeriod">Time Period</label>
+  <input id="userSaleTimePeriod" type="text" placeholder="e.g. 2024-07" />
+
+  <label for="userSalePrice">Price</label>
+  <input id="userSalePrice" type="number" step="1" placeholder="e.g. 250000" />
+
+  <label for="userSalePropertyType">Property Type</label>
+  <select id="userSalePropertyType">
+    <option value="">Any</option>
+    <option value="D">D - Detached</option>
+    <option value="S">S - Semi-detached</option>
+    <option value="T">T - Terraced</option>
+    <option value="F">F - Flat</option>
+    <option value="O">O - Other</option>
+  </select>
+
+  <label for="userSaleSource">Source</label>
+  <select id="userSaleSource">
+    <option value="user">user</option>
+    <option value="partner">partner</option>
+    <option value="survey">survey</option>
+  </select>
+
+  <button id="createSaleRecordBtn">Create Sales Record</button>
+</section>
+        <section class="panel rail-card">
+  <h3>Manage Sales Transactions</h3>
+
+  <label for="listSalePostcode">Filter by Postcode</label>
+  <input id="listSalePostcode" type="text" placeholder="optional" />
+
+  <label for="listSaleAreaCode">Filter by Area Code</label>
+  <input id="listSaleAreaCode" type="text" placeholder="optional" />
+
+  <label for="listSaleFromPeriod">From Period</label>
+  <input id="listSaleFromPeriod" type="text" placeholder="e.g. 2023-01" />
+
+  <label for="listSaleToPeriod">To Period</label>
+  <input id="listSaleToPeriod" type="text" placeholder="e.g. 2024-12" />
+
+  <label for="listSalePropertyType">Property Type</label>
+  <select id="listSalePropertyType">
+    <option value="">Any</option>
+    <option value="D">D - Detached</option>
+    <option value="S">S - Semi-detached</option>
+    <option value="T">T - Terraced</option>
+    <option value="F">F - Flat</option>
+    <option value="O">O - Other</option>
+  </select>
+
+  <label for="listSaleLimit">Limit</label>
+  <input id="listSaleLimit" type="number" value="10" min="1" max="200" />
+
+  <button id="listSaleRecordsBtn">List Sales Records</button>
+
+  <hr />
+
+  <label for="saleRecordId">Record ID</label>
+  <input id="saleRecordId" type="number" placeholder="e.g. 1" />
+
+  <button id="getSaleRecordBtn">Get One Record</button>
+    <button id="putSaleRecordBtn">Replace Record (PUT)</button>
+<button id="patchSaleRecordBtn">Patch Record (PATCH)</button>
+  <button id="deleteSaleRecordBtn" class="secondary-btn">Delete Record</button>
+</section>
+    </div>
+  </section>
+
+<section class="panel result-panel" id="resultPanel">
+  <h2>Response Output</h2>
+
+  <div class="status-row">
+    <span id="statusBadge" class="status-badge info">Ready</span>
+    <span id="responseSummary">No request yet.</span>
+  </div>
+
+  <div id="preview" class="result-preview">
+    <h3>Quick Preview</h3>
+    <div class="item">
+      <span class="label">Status:</span>
+      <span class="value">Waiting for a request</span>
+    </div>
+  </div>
+
+  <div id="structuredOutput" class="structured-output" style="display: none;"></div>
+
+  <div id="imagePreviewWrap" class="image-preview-wrap" style="display: none;">
+    <h3>Image Preview</h3>
+    <img id="imagePreview" alt="API image output" />
+  </div>
+
+  <details class="raw-output-wrap">
+    <summary>Show raw JSON response</summary>
+    <pre id="output">No request yet.</pre>
+  </details>
+</section>
+
+</main>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
