@@ -1,327 +1,246 @@
-# housing-api
-
+# Housing Market API
+A FastAPI-based housing data and analytics service for official and user-contributed UK housing records.
 ## 1. Overview
-This project implements a RESTful Web API that provides analytical insights
-into the UK housing market by integrating HM Land Registry(England and Wales) and ONS(UK) datasets.
+This project implements a RESTful housing market API that provides structured access to 
+UK housing-related data, including geographic reference data, official rental statistics, official property sales transactions, and user-contributed records. 
+The service is designed as a data-oriented API rather than a simple database wrapper: 
+in addition to standard resource retrieval, it supports filtering, aggregated statistics, availability queries, and selected trend visualisation endpoints.
 
-The API supports full CRUD operations on housing transactions and locations,
-and exposes additional analytical endpoints for regional price trends,
-median prices, and affordability indicators.
+The API combines authoritative public datasets with authenticated user-managed resources. 
+Official datasets are exposed as read-oriented resources for search and analysis, 
+while user-submitted rental and sales records can be created, updated, and deleted through protected endpoints using JWT bearer authentication. 
+This separation helps preserve the integrity of official data while still supporting user contribution and experimentation.
 
-The API supports:
-
-- official housing statistics
-- user-submitted rental and sales records
-- authentication with JWT
-- analytical endpoints for trends and aggregated metrics
 ## 2. Features
-- RESTful API design following HTTP conventions
-- Integration of UK housing datasets (ONS and HM Land Registry)
-- Official housing statistics endpoints
-- User-submitted rental and sales records (full CRUD)
-- JWT-based authentication system
-- Filtering and search capabilities
-- Analytical endpoints for housing price trends
-- Time-series rental statistics by area
-- Postcode → area mapping
-- Automated test suite using Pytest
-- CI/CD pipeline with GitHub Actions
-- Cloud deployment on Render
+- **Reference geography lookup**  
+  Supports area and postcode mapping resources for location-based queries.
+
+- **Official housing data access**  
+  Provides read-oriented access to official rental statistics and property sales transactions.
+
+- **User-contributed records**  
+  Allows authenticated users to create, update, and delete rental and sales records without modifying authoritative datasets.
+
+- **Analytical API endpoints**  
+  Supports filtered queries, aggregated statistics, latest snapshots, availability lookups, and selected trend visualisation endpoints.
+
+- **JWT-based authentication**  
+  Protects state-changing operations on user-managed resources using bearer-token authentication.
+
+- **OpenAPI documentation**  
+  Automatically generated interactive API documentation is available through FastAPI.
 ## 3. Tech Stack
-- Language: Python 3.13
-- Framework: FastAPI
-- Database: Sqlite
-- ORM SQLALchemy
-- API Documentation: Swagger / OpenAPI
-- Pydantic
-- Pytest
-- Uvicorn
-- Render (deployment)
+- **Language:** Python 3.13
+- **Web framework:** FastAPI
+- **Database:** SQLite
+- **Validation and schemas:** Pydantic
+- **Authentication:** JWT / OAuth2 password bearer
+- **API documentation:** OpenAPI / Swagger UI
+- **Testing:** Pytest
+- **ASGI server:** Uvicorn
+- **Deployment:** Render
+- **CI/CD:** GitHub Actions
 ## 4. Project Structure
-```
+The repository is organised into application code, data assets, tests, and supporting documentation:
+
+```text
 housing-api/
-│
 ├── app/
-│   ├── api/
-│   │   ├── routers/        # API endpoints
-│   │   └── deps.py         # shared dependencies
-│   │
-│   ├── security/           # JWT authentication
-│   ├── services/           # business logic
-│   ├── schemas/            # Pydantic models
-│   └── main.py             # FastAPI application entry
-│
-├── tests/                  # pytest test suite
-│
-├── requirements.txt
-├── README.md
-└── .github/workflows       # CI pipeline
+│   ├── api/            # API dependencies and shared request handling utilities
+│   ├── routers/        # FastAPI route definitions grouped by resource
+│   ├── services/       # Business logic and database query functions
+│   ├── schemas/        # Pydantic request/response models
+│   ├── core/           # Configuration, authentication, and shared utilities
+│   └── main.py         # FastAPI application entry point
+├── data/               # SQLite database files and local data assets
+├── tests/              # Automated pytest test suite
+├── scripts/            # Database initialisation and utility scripts
+├── docs/               # Additional project documentation
+├── logs/               # Application or audit logs
+├── openapi.json        # Exported OpenAPI specification
+├── README.md           # Project overview and usage guide
+└── requirements.txt    # Python dependencies
 ```
-
-The project follows a layered architecture:
-
-- Router layer → handles HTTP requests
-- Service layer → contains business logic
-- Schema layer → defines request and response models
-- Security layer → manages authentication and authorization
 ## 5. Setup & Installation
-Clone the repository:
+Clone the repository and install dependencies:
 
 ```bash
-https://github.com/SHIRUIZHAOIILLiil/housing-api.git
+git clone https://github.com/SHIRUIZHAOIILLiil/housing-api.git
 cd housing-api
 pip install -r requirements.txt
-
-Set environment variables:
+```
+Set the required environment variables before running the API:
+```bash
 export JWT_SECRET=your_secret_key
-PORT=YOUR_PORT
-HOST=YOUR_HOST
+export HOST=127.0.0.1
+export PORT=8000
+```
 
 If you want to use full dataset of the system, set environment variables:
-DATAPATH=Your_DATA_PATH
+```bash
+export DATAPATH=/path/to/your/data
 ```
+By default, the project uses the demo SQLite database. In config.py, both DATABASE and DATABASE_DEMO are defined, 
+and get_conn() in deps.py is currently configured to connect to settings.DATABASE_DEMO. The demo database is intended for lightweight local testing and coursework demonstration, while the full database can be generated from raw source files when needed.
+
+
+On Windows, use set in Command Prompt or $env:VARIABLE_NAME="value" in PowerShell instead of export.
+
+
 ## 6. Running the Project
-Start the FastAPI server:
+Start the development server with:
 
-```
+```bash
 uvicorn app.main:app --reload
-http://HOST:PORT
-
-Interactive API documentation:
-http://HOST:PORT/docs
 ```
+By default, the API will be available at:
+- http://127.0.0.1:8000
+- http://127.0.0.1:8000/docs for the interactive Swagger UI
+- http://127.0.0.1:8000/redoc for the ReDoc interface
+
+If you change HOST or PORT in your environment variables, use the corresponding address when accessing the API documentation.
 ## 7. Deployment
+The API is deployed on Render and can be accessed online at:
 ```
-The API is deployed on Render:
-https://housing-api-p0jk.onrender.com/
-Interactive API documentation:
-https://housing-api-p0jk.onrender.com/docs#/
+- **Live API:** `https://housing-api-p0jk.onrender.com/`
+- **Swagger UI:** `https://housing-api-p0jk.onrender.com/docs`
+- **ReDoc:** `https://housing-api-p0jk.onrender.com/redoc`
 ```
-## 7. API Documentation
-### 7.1 Areas
-- GET /areas
-  - Purpose: List all areas (Supports ?q= fuzzy search)
-  - Responses
-    - 200 OK – returns list
-    - 400 Bad Request – invalid query param
-- GET /areas/{area_code}
-  - Purpose: Search a single area by area code
-  - Responses
-    - 200 OK – returns single area object
-    - 400 Bad Request – invalid query param
-<!--- POST /areas
-  - Purpose: Create an area
-  - Responses
-    - 201 Created – successfully created 
-    - 400 Bad Request – invalid input 
-    - 409 Conflict – area_code already exists
-- PUT /areas/{area_code}
-  - Purpose: Update area name
-  - Responses
-    - 200 OK – successfully updated 
-    - 400 Bad Request – invalid data 
-    - 404 Not Found – area not found
-- DELETE /areas/{area_code}
-  - Purpose: Delete area (If postcode_map/rent_stats is a dependency, a 409 error may occur).
-  - Responses
-    - 204 No Content – successfully deleted 
-    - 404 Not Found – area not found 
-    - 409 Conflict – area has dependent records-->
-### 7.2 Postcode
-- GET /postcodes/{postcode}
-  - Purpose: Find which area an individual postcode belongs to.
-  - Responses 
-    - 200 OK – returns mapping 
-    - 404 Not Found – postcode not found 
-    - 400 Bad Request – invalid postcode format
-- GET /areas/{area_code}/postcodes 
-  - Purpose: List all postcodes within a specific area.
-  - Responses 
-    - 200 OK – returns list (possibly empty)
-    - 404 Not Found – area not found
-- GET /postcodes 
-  - Purpose: Search postcodes (useful for fuzzy search / prefix search)
-  - Responses 
-    - 200 OK – returns list
-### 7.3 Official Rent Stats
-  - GET /rent-stats
-    - Purpose: Retrieve rent statistics for a given area and time period.
-    - Query params (required):
-      - area_code (string)
-      - time_period (string, YYYY-MM)
-    - Responses:
-      - 200 OK – returns stats object 
-      - 404 Not Found – no data available for the given inputs 
-      - 400 Bad Request – missing/invalid parameters 
-  - GET /areas/{area_code}/rent-stats 
-    - Purpose: Retrieve rent statistics time-series for an area.
-    - Query params (optional):
-      - from (string, YYYY-MM)
-      - to (string, YYYY-MM)
-    - Responses:
-      - 200 OK – returns list (possibly empty)
-      - 404 Not Found – area not found 
-  - GET /areas/{area_code}/rent-stats/latest 
-    - Purpose: Retrieve the latest available rent statistics for an area. 
-    - Responses:
-      - 200 OK – returns latest stats 
-      - 404 Not Found – no data available for this area
-### 7.4 Official Sales Transactions
-- GET /official/sales-transactions 
-  - Purpose: List official property sale transactions imported from HM Land Registry (supports search/filtering). 
-  - Responses:
-    - 200 OK – returns list (possibly empty)
-- GET /official/sales-transactions/{transaction_uuid} 
-  - Purpose: Retrieve a single official sale transaction by UUID. 
-  - Responses:
-    - 200 OK – returns single transaction object 
-    - 404 Not Found – transaction not found
+The deployed version is intended for demonstration and inspection of the API. For local development, follow the setup instructions above and run the service with Uvicorn.
 
-- GET /official/areas/{area_code}/sales-transactions 
-  - Purpose: List official sale transactions within a specific area (derived via postcode → area mapping). 
-  - Responses:
-    - 200 OK – returns list (possibly empty)
-    - 404 Not Found – area not found 
+> The deployed service may take a short time to respond on first access due to Render cold starts.
+## 8. API Overview
 
-- GET /official/postcodes/{postcode}/sales-transactions 
-  - Purpose: List official sale transactions for a given postcode. 
-  - Responses:
-    - 200 OK – returns list (possibly empty)
-    - 404 Not Found – postcode not found
-### 7.5 User Rent Stats
-- POST /rental-records 
-  - Purpose: Create a new user-contributed rental record.
-  - Responses:
-    - 201 Created – successfully created
-    - 400 Bad Request – invalid input (e.g. wrong time format)
-    - 404 Not Found – area_code or postcode not found
-- GET /rental-records/{id}
-  - Purpose: Retrieve a specific rental record by ID.
-  - Responses:
-    - 200 OK – returns rental record
-    - 404 Not Found – record not found
-- GET /rental-records
-  - Purpose: List user rental records (supports filtering by business time).
-  - Responses:
-    - 200 OK – returns list (possibly empty)
-- PUT /rental-records/{id}
-  - Purpose: Update a rental record.
-  - Responses:
-    - 200 OK – successfully updated
-    - 400 Bad Request – invalid data
-    - 404 Not Found – record not found
-- DELETE /rental-records/{id}
-  - Purpose: Delete a rental record.
-  - Responses:
-    - 204 No Content – successfully deleted
-    - 404 Not Found – record not found
-### 7.6 Rent Statistics
-- GET /rent-stats
-  - Purpose: Retrieve aggregated rent statistics for a given area and time period.
-  - Responses:
-    - 200 OK – returns statistics object
-    - 404 Not Found – no data available
-    - 400 Bad Request – missing or invalid parameters
-- GET /areas/{area_code}/rent-stats
-  - Purpose: Retrieve rent statistics time-series for a specific area.
-  - Responses:
-    - 200 OK – returns list (possibly empty)
-    - 404 Not Found – area not found (optional)
-- GET /areas/{area_code}/rent-stats
-  - Purpose: Retrieve rent statistics time-series for a specific area.
-  - Responses:
-    - 200 OK – returns list (possibly empty)
-    - 404 Not Found – area not found (optional)
-### 7.7 User sales-transaction
-- POST /user-sales-transactions
-  - Purpose: Create a new user-contributed sales transaction record.
-  - Request Body (JSON):
-    - postcode (string, optional)
-    - area_code (string, optional)
-    - time_period (string, required, format YYYY-MM)
-    - price (number, required)
-    - property_type (string, optional, e.g. F, D, S, T)
-    - tenure (string, optional)
-    - new_build (boolean or string, optional)
-  - Responses:
-    - 201 Created – successfully created
-    - 400 Bad Request – invalid input (e.g. wrong time format)
-    - 404 Not Found – postcode or area_code not found
-- GET /user-sales-transactions/{id}
-  - Purpose: Retrieve a specific user sales transaction by ID.
-  - Responses:
-    - 200 OK – returns transaction object
-    - 404 Not Found – transaction not found
-- GET /user-sales-transactions
-  - Purpose: List user sales transactions (supports filtering by business time).
-  - Query Parameters (optional):
-    - area_code
-    - postcode
-    - from (YYYY-MM)
-    - to (YYYY-MM)
-    - property_type
-    - min_price
-    - max_price
-    - page
-    - page_size
-  - Responses:
-    - 200 OK – returns list (possibly empty)
-- PUT /user-sales-transactions/{id}
-  - Purpose: Update a user sales transaction record.
-  - Request Body (JSON):
-    - Any updatable fields (e.g. price, property_type, tenure, etc.)
-  - Responses:
-    - 200 OK – successfully updated
-    - 400 Bad Request – invalid data
-    - 404 Not Found – transaction not found
-- DELETE /user-sales-transactions/{id}
-  - Purpose: Delete a user sales transaction record.
-  - Responses:
-    - 204 No Content – successfully deleted
-    - 404 Not Found – transaction not found
-## 8. Example Usage
-## 9. Data Sources
+The API is organised into several resource families covering reference geography data, official housing datasets, user-managed records, and authentication.
+
+### 8.1 Areas and Postcode Mapping
+
+Reference endpoints for geographic lookup and postcode-to-area mapping.
+
+- `GET /areas`
+- `GET /areas/{area_code}`
+- `GET /areas/{area_code}/postcodes`
+- `GET /postcode_map`
+- `GET /postcode_map/{postcode}`
+
+### 8.2 Official Rental Statistics
+
+Read-oriented endpoints for querying official rental statistics by area, postcode, time period, and related filters, including trend visualisation by area or area name.
+
+- `GET /rent_stats_official/rent-stats`
+- `GET /rent_stats_official/areas/{area_code}/rent-stats`
+- `GET /rent_stats_official/areas/{area_code}/rent-stats/latest`
+- `GET /rent_stats_official/areas/{area_code}/rent-stats/availability`
+- `GET /rent_stats_official/areas/{area_code}/rent-trend.png`
+- `GET /rent_stats_official/areas/rent-trend.png`
+
+### 8.3 Official Sales Transactions
+
+Read-oriented endpoints for official sales transaction lookup and aggregated sales statistics.
+
+- `GET /sales_official`
+- `GET /sales_official/transactions/{transaction_uuid}`
+- `GET /sales_official/areas/{area_code}`
+- `GET /sales_official/postcodes/{postcode}`
+- `GET /sales_official/sales-stats`
+- `GET /sales_official/areas/{area_code}/sales-stats`
+- `GET /sales_official/areas/{area_code}/sales-stats/latest`
+- `GET /sales_official/areas/{area_code}/sales-stats/availability`
+
+### 8.4 User-Contributed Rental Records
+
+Authenticated endpoints for creating, updating, and deleting user-managed rental records. Write operations require JWT bearer authentication.
+
+- `GET /rent_user`
+- `GET /rent_user/{record_id}`
+- `POST /rent_user`
+- `PUT /rent_user/{record_id}`
+- `PATCH /rent_user/{record_id}`
+- `DELETE /rent_user/{record_id}`
+
+### 8.5 User-Contributed Sales Records
+
+Authenticated endpoints for managing user-submitted sales transaction records. Write operations require JWT bearer authentication.
+
+- `GET /user-sales-transactions`
+- `GET /user-sales-transactions/{record_id}`
+- `POST /user-sales-transactions`
+- `PUT /user-sales-transactions/{record_id}`
+- `PATCH /user-sales-transactions/{record_id}`
+- `DELETE /user-sales-transactions/{record_id}`
+
+### 8.6 Authentication
+
+Authentication endpoints for user registration and login, used to obtain bearer tokens for protected write operations.
+
+- `POST /auth/register`
+- `POST /auth/login`
+## 9. Usage
+
+After starting the API locally or opening the deployed version, the easiest way to explore and test the service is through the interactive Swagger UI available at `/docs`.
+
+A typical usage flow is:
+
+1. Browse public read-only resources such as areas, postcode mapping, official rental statistics, and official sales transactions.
+2. Use query parameters and resource-specific routes to filter by area, postcode, time period, or other supported fields.
+3. Register a user account with `POST /auth/register` if you want to use protected write operations.
+4. Log in with `POST /auth/login` to obtain a JWT bearer token.
+5. Authorise in Swagger UI using the bearer token, then access protected endpoints for creating, updating, or deleting user-contributed rental and sales records.
+
+The public official-data endpoints can be queried without authentication, while write operations on user-managed resources require a valid bearer token.
+### Example workflow
+
+- Look up an area or postcode
+- Query official rental or sales data
+- Register and log in
+- Submit a user-contributed rental or sales record
+## 10. Data Sources
 - Housing Price: Statistical data set Price Paid Data
   - URL: https://www.gov.uk/government/statistical-data-sets/price-paid-data-downloads
 - Renting Price: Price Index of Private Rents, UK: monthly price statistics
   - URL: https://www.ons.gov.uk/economy/inflationandpriceindices/datasets/priceindexofprivaterentsukmonthlypricestatistics
 - National Statistics Postcode Lookup
   - URL: https://geoportal.statistics.gov.uk/datasets/8a1d5b58df824b2e86fe07ddfdd87165/about 
-## 10. Testing
-This project includes an automated test suite built with Pytest.
+## 11. Testing
 
-Run tests with:
+The project includes an automated test suite built with `pytest` to verify core API behaviour, validation logic, and error handling.
+
+To run the tests locally:
 
 ```bash
 pytest
 ```
-The test suite covers:
-- API endpoints 
-- CRUD operations 
-- authentication 
-- error handling
-## 11. Limitations & Future Work
-Current limitations include:
+The test suite covers representative behaviours across the API, including:
+successful requests to public read-only endpoints
+validation of query parameters and path parameters
+missing-resource behaviour such as 404 Not Found
+invalid input cases such as 422 Unprocessable Entity
+authenticated write operations for user-managed resources
+Testing was used not only to check correctness, but also to improve consistency across endpoints, especially for validation, response codes, and protected operations.
+## 12. Limitations and Future Work
 
-- SQLite limits scalability for large datasets
-- limited caching for analytical queries
-- basic authentication without role-based access control
+The current implementation is suitable for coursework demonstration, but several limitations remain.
 
-Future improvements may include:
+- The project currently uses SQLite, which is lightweight and portable but less suitable for higher write concurrency or larger-scale deployment.
+- The security model supports JWT-based authentication for protected write operations, but more advanced controls such as role-based access control, token revocation, and rate limiting are not yet implemented.
+- The contributed-data model currently focuses on authenticated end users and does not yet support richer uploader roles, moderation workflows, or trusted partner submissions.
+- Although the API already provides filtering, aggregated statistics, availability queries, and trend visualisation, the analytical layer could be extended further with broader dataset coverage and richer machine-consumable outputs.
 
-- migration to PostgreSQL
-- caching for frequently accessed analytics
-- advanced authentication and user roles
-## 12. GenAI Usage Declaration
-Generative AI tools (ChatGPT) were used to assist with:
+Future work would therefore focus on improving scalability, strengthening access control, extending the contributor model, and expanding the analytical capabilities of the API.
+## 13. Generative AI Usage Declaration
 
-- debugging Python and FastAPI errors
-- improving API documentation structure
-- reviewing database design
-- generating test case ideas
+Generative AI tools, primarily ChatGPT, were used during the project as support for planning, design discussion, testing strategy, debugging discussion, and documentation refinement.
+
+AI was used to explore alternatives, clarify trade-offs, and improve the structure and wording of technical explanations, rather than to replace independent implementation work. 
+All final code, design decisions, and written content were reviewed, adapted, and verified manually before inclusion in the project.
+
+Examples of exported conversation logs are provided as supplementary material in line with the coursework requirements.
 
 All generated suggestions were reviewed, tested and integrated manually.
-## 13. Author
+## 14 API documentation PDF Reference
+- Machine-readable OpenAPI specification: ```/docs/openapi_v2.json```
+- Human-readable API documentation PDF: ```/docs/Housing-API.pdf```
+## 15. Author
 Shirui Zhao
 
 University of Leeds
