@@ -6,6 +6,7 @@ from .service_rent_user import create_rental_record, get_rental_record, list_ren
 from .service_sales_user import create_user_sale, get_user_sale, list_user_sales, patch_user_sale, delete_user_sale, replace_user_sale
 from .service_users import create_user, get_user_by_id, get_user_by_login_key
 from .service_audit import log_audit_event
+from .service_chat import handle_chat_message
 
 
 __all__ = [
@@ -44,5 +45,7 @@ __all__ = [
     "get_user_by_id",
     "get_user_by_login_key",
 
-    "log_audit_event"
+    "log_audit_event",
+
+    "handle_chat_message",
 ]

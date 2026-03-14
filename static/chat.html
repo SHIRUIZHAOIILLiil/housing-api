@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Housing Chat Demo</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 980px;
+      margin: 40px auto;
+      padding: 0 16px;
+      background: #f7f7f7;
+    }
+
+    h1 {
+      margin-bottom: 8px;
+    }
+
+    #chat-box {
+      border: 1px solid #ccc;
+      border-radius: 10px;
+      padding: 16px;
+      min-height: 420px;
+      margin-bottom: 16px;
+      background: white;
+      overflow-y: auto;
+    }
+
+    .msg {
+      margin-bottom: 14px;
+      padding: 12px 14px;
+      border-radius: 10px;
+      white-space: pre-wrap;
+    }
+
+    .user {
+      background: #dfe8f6;
+    }
+
+    .assistant {
+      background: #ececec;
+    }
+
+    .meta {
+      font-size: 12px;
+      color: #666;
+      margin-top: 8px;
+    }
+
+    .row {
+      display: flex;
+      gap: 8px;
+    }
+
+    input {
+      flex: 1;
+      padding: 12px;
+      font-size: 16px;
+      border: 1px solid #888;
+      border-radius: 6px;
+    }
+
+    button {
+      padding: 12px 18px;
+      font-size: 16px;
+      cursor: pointer;
+      border: 1px solid #888;
+      border-radius: 6px;
+      background: white;
+    }
+
+    .card {
+      margin-top: 12px;
+      background: white;
+      border: 1px solid #d0d0d0;
+      border-radius: 10px;
+      padding: 14px;
+    }
+
+    .card-title {
+      font-weight: 700;
+      font-size: 18px;
+      margin-bottom: 10px;
+    }
+
+    .section-title {
+      font-weight: 700;
+      margin-top: 12px;
+      margin-bottom: 8px;
+    }
+
+    .kv-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(220px, 1fr));
+      gap: 8px 16px;
+    }
+
+    .kv-item {
+      background: #f8f8f8;
+      border-radius: 8px;
+      padding: 10px 12px;
+    }
+
+    .kv-label {
+      font-size: 12px;
+      color: #666;
+      margin-bottom: 4px;
+    }
+
+    .kv-value {
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    ul.data-list {
+      margin: 6px 0 0 18px;
+      padding: 0;
+    }
+
+    details {
+      margin-top: 12px;
+    }
+
+    pre {
+      white-space: pre-wrap;
+      word-break: break-word;
+      background: #f6f6f6;
+      padding: 10px;
+      border-radius: 8px;
+      overflow-x: auto;
+    }
+  </style>
+</head>
+<body>
+  <h1>Housing Chat Demo</h1>
+  <p>Ask in natural language and the assistant will choose a matching tool.</p>
+
+  <div id="chat-box"></div>
+
+  <div class="row">
+    <input id="message" type="text" placeholder="Example: Show latest rent stats for E08000035" />
+    <button onclick="sendMessage()">Send</button>
+  </div>
+
+  <script>
+    const chatBox = document.getElementById("chat-box");
+    const input = document.getElementById("message");
+
+    function escapeHtml(text) {
+      return String(text)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;");
+    }
+
+    function formatMoney(value) {
+      if (value === null || value === undefined || value === "") return "N/A";
+      return `£${value}`;
+    }
+
+    function formatValue(value) {
+      if (value === null || value === undefined || value === "") return "N/A";
+      return String(value);
+    }
+
+    function addMessageElement(role, innerHtml) {
+      const div = document.createElement("div");
+      div.className = `msg ${role}`;
+      div.innerHTML = innerHtml;
+      chatBox.appendChild(div);
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    function appendUserMessage(text) {
+      addMessageElement(
+        "user",
+        `<strong>You:</strong><br>${escapeHtml(text)}`
+      );
+    }
+
+    function renderKeyValue(label, value) {
+      return `
+        <div class="kv-item">
+          <div class="kv-label">${escapeHtml(label)}</div>
+          <div class="kv-value">${escapeHtml(value)}</div>
+        </div>
+      `;
+    }
+
+    function renderListFromObject(obj, money = false) {
+      if (!obj || typeof obj !== "object") {
+        return `<div>No data</div>`;
+      }
+
+      let items = "";
+      for (const [key, value] of Object.entries(obj)) {
+        items += `<li>${escapeHtml(key)}: ${escapeHtml(money ? formatMoney(value) : formatValue(value))}</li>`;
+      }
+      return `<ul class="data-list">${items}</ul>`;
+    }
+
+    function renderRentStatsCard(reply, data, toolUsed) {
+      const overall = data?.overall || {};
+      const oneBed = data?.one_bed || {};
+      const twoBed = data?.two_bed || {};
+      const threeBed = data?.three_bed || {};
+      const propertyTypes = data?.property_prices || {};
+
+      const html = `
+        <strong>Assistant:</strong><br>
+        ${escapeHtml(reply)}
+
+        <div class="card">
+          <div class="card-title">Latest rent stats</div>
+
+          <div class="kv-grid">
+            ${renderKeyValue("Area code", formatValue(data?.area_code))}
+            ${renderKeyValue("Region / county", formatValue(data?.region_or_country_name))}
+            ${renderKeyValue("Time period", formatValue(data?.time_period))}
+            ${renderKeyValue("Overall rent", formatMoney(overall?.rental_price))}
+            ${renderKeyValue("Annual change", formatValue(overall?.annual_change))}
+            ${renderKeyValue("Index", formatValue(overall?.index))}
+          </div>
+
+          <div class="section-title">By bedrooms</div>
+          <div class="kv-grid">
+            ${renderKeyValue("1 bed", formatMoney(oneBed?.rental_price))}
+            ${renderKeyValue("2 bed", formatMoney(twoBed?.rental_price))}
+            ${renderKeyValue("3 bed", formatMoney(threeBed?.rental_price))}
+          </div>
+
+          <div class="section-title">By property type</div>
+          ${renderListFromObject(propertyTypes, true)}
+
+          <details>
+            <summary>Show raw data</summary>
+            <pre>${escapeHtml(JSON.stringify(data, null, 2))}</pre>
+          </details>
+        </div>
+
+        <div class="meta">Tool used: ${escapeHtml(toolUsed)}</div>
+      `;
+      addMessageElement("assistant", html);
+    }
+
+    function renderGenericCard(reply, data, toolUsed) {
+      const html = `
+        <strong>Assistant:</strong><br>
+        ${escapeHtml(reply)}
+
+        <div class="card">
+          <div class="card-title">Result</div>
+          <details open>
+            <summary>Structured data</summary>
+            <pre>${escapeHtml(JSON.stringify(data, null, 2))}</pre>
+          </details>
+        </div>
+
+        ${toolUsed ? `<div class="meta">Tool used: ${escapeHtml(toolUsed)}</div>` : ""}
+      `;
+      addMessageElement("assistant", html);
+    }
+
+    function appendAssistantMessage(reply, toolUsed = null, data = null) {
+      if (toolUsed === "get_latest_rent_stats" && data) {
+        renderRentStatsCard(reply, data, toolUsed);
+        return;
+      }
+
+      if (data) {
+        renderGenericCard(reply, data, toolUsed);
+        return;
+      }
+
+      const html = `
+        <strong>Assistant:</strong><br>
+        ${escapeHtml(reply)}
+        ${toolUsed ? `<div class="meta">Tool used: ${escapeHtml(toolUsed)}</div>` : ""}
+      `;
+      addMessageElement("assistant", html);
+    }
+
+    async function sendMessage() {
+      const message = input.value.trim();
+      if (!message) return;
+
+      appendUserMessage(message);
+      input.value = "";
+
+      try {
+        const resp = await fetch("/chat/ask", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ message })
+        });
+
+        const data = await resp.json();
+
+        if (!resp.ok) {
+          appendAssistantMessage(data.detail || "Something went wrong.");
+          return;
+        }
+
+        appendAssistantMessage(data.reply, data.tool_used, data.data);
+      } catch (err) {
+        appendAssistantMessage("Failed to connect to chat backend.");
+      }
+    }
+
+    input.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") {
+        sendMessage();
+      }
+    });
+  </script>
+</body>
+</html>

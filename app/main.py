@@ -1,12 +1,11 @@
 import uvicorn
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 from pathlib import Path
 
 from app.core import Settings, RequestLoggingMiddleware, setup_logging
-from app.api.routers import router_areas, router_rent, router_postcode_map, router_sales_official, router_rent_user, router_sales_user, router_auth
+from app.api.routers import router_areas, router_rent, router_postcode_map, router_sales_official, router_rent_user, router_sales_user, router_auth, router_chat
 from app.schemas.errors import AppError
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -32,6 +31,11 @@ def create_app() -> FastAPI:
     @app.get("/", include_in_schema=False)
     def serve_frontend():
         return FileResponse(STATIC_DIR / "index.html")
+
+    @app.get("/chat-demo")
+    def chat_demo_page():
+        return FileResponse(STATIC_DIR / "chat.html")
+
     app.include_router(router_areas.router, prefix="/areas", tags=["areas"])
     app.include_router(router_postcode_map.router, prefix="/postcode_map", tags=["postcode_map"])
     app.include_router(router_rent.router, prefix="/rent_stats_official", tags=["rent_stats_official"])
@@ -39,6 +43,7 @@ def create_app() -> FastAPI:
     app.include_router(router_rent_user.router, prefix="/rent_user", tags=["rent_user"])
     app.include_router(router_sales_user.router, prefix="/user-sales-transactions", tags=["user_sales_transactions"])
     app.include_router(router_auth.router, prefix="/auth", tags=["authority"])
+    app.include_router(router_chat.router)
     return app
 
 app = create_app()
