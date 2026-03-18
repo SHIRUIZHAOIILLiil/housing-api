@@ -1,5 +1,5 @@
 # Housing Market API
-A FastAPI-based housing data and analytics service for official and user-contributed UK housing records.
+A FastAPI-based housing data and analytics service for official and user-contributed UK housing records, with a web frontend and an MCP-compatible tool interface.
 ## 1. Overview
 This project implements a RESTful housing market API that provides structured access to 
 UK housing-related data, including geographic reference data, official rental statistics, official property sales transactions, and user-contributed records. 
@@ -29,12 +29,21 @@ This separation helps preserve the integrity of official data while still suppor
 
 - **OpenAPI documentation**  
   Automatically generated interactive API documentation is available through FastAPI.
+
+- **Web Frontend**  
+  Provides a lightweight human-facing interface for browsing and interacting with selected housing data without relying entirely on raw API calls.
+
+- **MCP-compatible interface**  
+  Exposes selected backend capabilities through a Model Context Protocol (MCP) layer, enabling tool-based interaction in addition to standard HTTP access.
+
 ## 3. Tech Stack
 - **Language:** Python 3.13
 - **Web framework:** FastAPI
 - **Database:** SQLite
 - **Validation and schemas:** Pydantic
 - **Authentication:** JWT / OAuth2 password bearer
+- **frontend:** HTML/CSS/JavaScript
+- **MCP integration:** Model Context Protocol (MCP)
 - **API documentation:** OpenAPI / Swagger UI
 - **Testing:** Pytest
 - **ASGI server:** Uvicorn
@@ -51,11 +60,13 @@ housing-api/
 │   ├── services/       # Business logic and database query functions
 │   ├── schemas/        # Pydantic request/response models
 │   ├── core/           # Configuration, authentication, and shared utilities
+│   ├── mcp_server/     # MCP server with tools
 │   └── main.py         # FastAPI application entry point
 ├── data/               # SQLite database files and local data assets
 ├── tests/              # Automated pytest test suite
 ├── scripts/            # Database initialisation and utility scripts
 ├── docs/               # Additional project documentation
+├── static/             # Frontend documentation
 ├── logs/               # Application or audit logs
 ├── openapi.json        # Exported OpenAPI specification
 ├── README.md           # Project overview and usage guide
@@ -94,12 +105,21 @@ Start the development server with:
 uvicorn app.main:app --reload
 ```
 By default, the API will be available at:
-- http://127.0.0.1:8000
+- http://127.0.0.1:8000 for the frontend view
 - http://127.0.0.1:8000/docs for the interactive Swagger UI
 - http://127.0.0.1:8000/redoc for the ReDoc interface
+- **MCP needs to be loaded at another port:** http://127.0.0.1:8888/mcp for the mcp URL
 
 If you change HOST or PORT in your environment variables, use the corresponding address when accessing the API documentation.
-## 7. Deployment
+## 7. Frontend and MCP Access
+In addition to the REST API, the project also includes:
+- a lightweight frontend for human-centred interaction and demonstration;
+- an MCP-compatible interface for tool-based access to selected backend capabilities.
+
+These layers sit on top of the same backend services and reuse the existing API logic rather than duplicating business functionality.
+### Inspect the MCP server locally
+```npx @modelcontextprotocol/inspector python -m app.mcp.server``` 
+## 8. Deployment
 The API is deployed on Render and can be accessed online at:
 ```
 - **Live API:** `https://housing-api-p0jk.onrender.com/`
@@ -109,11 +129,11 @@ The API is deployed on Render and can be accessed online at:
 The deployed version is intended for demonstration and inspection of the API. For local development, follow the setup instructions above and run the service with Uvicorn.
 
 > The deployed service may take a short time to respond on first access due to Render cold starts.
-## 8. API Overview
+## 9. API Overview
 
 The API is organised into several resource families covering reference geography data, official housing datasets, user-managed records, and authentication.
 
-### 8.1 Areas and Postcode Mapping
+### 9.1 Areas and Postcode Mapping
 
 Reference endpoints for geographic lookup and postcode-to-area mapping.
 
@@ -123,7 +143,7 @@ Reference endpoints for geographic lookup and postcode-to-area mapping.
 - `GET /postcode_map`
 - `GET /postcode_map/{postcode}`
 
-### 8.2 Official Rental Statistics
+### 9.2 Official Rental Statistics
 
 Read-oriented endpoints for querying official rental statistics by area, postcode, time period, and related filters, including trend visualisation by area or area name.
 
@@ -134,7 +154,7 @@ Read-oriented endpoints for querying official rental statistics by area, postcod
 - `GET /rent_stats_official/areas/{area_code}/rent-trend.png`
 - `GET /rent_stats_official/areas/rent-trend.png`
 
-### 8.3 Official Sales Transactions
+### 9.3 Official Sales Transactions
 
 Read-oriented endpoints for official sales transaction lookup and aggregated sales statistics.
 
@@ -147,7 +167,7 @@ Read-oriented endpoints for official sales transaction lookup and aggregated sal
 - `GET /sales_official/areas/{area_code}/sales-stats/latest`
 - `GET /sales_official/areas/{area_code}/sales-stats/availability`
 
-### 8.4 User-Contributed Rental Records
+### 9.4 User-Contributed Rental Records
 
 Authenticated endpoints for creating, updating, and deleting user-managed rental records. Write operations require JWT bearer authentication.
 
@@ -158,7 +178,7 @@ Authenticated endpoints for creating, updating, and deleting user-managed rental
 - `PATCH /rent_user/{record_id}`
 - `DELETE /rent_user/{record_id}`
 
-### 8.5 User-Contributed Sales Records
+### 9.5 User-Contributed Sales Records
 
 Authenticated endpoints for managing user-submitted sales transaction records. Write operations require JWT bearer authentication.
 
@@ -169,13 +189,13 @@ Authenticated endpoints for managing user-submitted sales transaction records. W
 - `PATCH /user-sales-transactions/{record_id}`
 - `DELETE /user-sales-transactions/{record_id}`
 
-### 8.6 Authentication
+### 9.6 Authentication
 
 Authentication endpoints for user registration and login, used to obtain bearer tokens for protected write operations.
 
 - `POST /auth/register`
 - `POST /auth/login`
-## 9. Usage
+## 10. Usage
 
 After starting the API locally or opening the deployed version, the easiest way to explore and test the service is through the interactive Swagger UI available at `/docs`.
 
@@ -194,14 +214,14 @@ The public official-data endpoints can be queried without authentication, while 
 - Query official rental or sales data
 - Register and log in
 - Submit a user-contributed rental or sales record
-## 10. Data Sources
+## 11. Data Sources
 - Housing Price: Statistical data set Price Paid Data
   - URL: https://www.gov.uk/government/statistical-data-sets/price-paid-data-downloads
 - Renting Price: Price Index of Private Rents, UK: monthly price statistics
   - URL: https://www.ons.gov.uk/economy/inflationandpriceindices/datasets/priceindexofprivaterentsukmonthlypricestatistics
 - National Statistics Postcode Lookup
   - URL: https://geoportal.statistics.gov.uk/datasets/8a1d5b58df824b2e86fe07ddfdd87165/about 
-## 11. Testing
+## 12. Testing
 
 The project includes an automated test suite built with `pytest` to verify core API behaviour, validation logic, and error handling.
 
@@ -217,7 +237,7 @@ missing-resource behaviour such as 404 Not Found
 invalid input cases such as 422 Unprocessable Entity
 authenticated write operations for user-managed resources
 Testing was used not only to check correctness, but also to improve consistency across endpoints, especially for validation, response codes, and protected operations.
-## 12. Limitations and Future Work
+## 13. Limitations and Future Work
 
 The current implementation is suitable for coursework demonstration, but several limitations remain.
 
@@ -227,7 +247,7 @@ The current implementation is suitable for coursework demonstration, but several
 - Although the API already provides filtering, aggregated statistics, availability queries, and trend visualisation, the analytical layer could be extended further with broader dataset coverage and richer machine-consumable outputs.
 
 Future work would therefore focus on improving scalability, strengthening access control, extending the contributor model, and expanding the analytical capabilities of the API.
-## 13. Generative AI Usage Declaration
+## 14. Generative AI Usage Declaration
 
 Generative AI tools, primarily ChatGPT, were used during the project as support for planning, design discussion, testing strategy, debugging discussion, and documentation refinement.
 
@@ -237,14 +257,14 @@ All final code, design decisions, and written content were reviewed, adapted, an
 Examples of exported conversation logs are provided as supplementary material in line with the coursework requirements.
 
 All generated suggestions were reviewed, tested and integrated manually.
-## 14. API documentation PDF Reference
+## 15. API documentation PDF Reference
 - Machine-readable OpenAPI specification: ```/docs/openapi_v2.json```
 - Human-readable API documentation PDF: ```/docs/Housing-API.pdf```
-## 15. Technical Report and Presentation Slide
+## 16. Technical Report and Presentation Slide
 - Technical Report: ```/docs/Housing-API-technical-report```
 - Slides: ```/docs/Housing-API-slides.pdf``` or ```/docs/Housing-API.pptx```
 
-## 16. Author
+## 17. Author
 Shirui Zhao
 
 University of Leeds
