@@ -24,7 +24,7 @@ def test_get_conn_disables_sqlite_same_thread(monkeypatch):
     conn_generator = deps.get_conn()
     conn = next(conn_generator)
 
-    assert captured["database_path"] == deps.settings.DATABASE
+    assert captured["database_path"] == deps.settings.DATABASE_DEMO
     assert captured["kwargs"]["check_same_thread"] is False
     assert conn.row_factory is deps.sqlite3.Row
 
