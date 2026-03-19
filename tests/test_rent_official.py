@@ -1,4 +1,6 @@
 
+import pytest
+
 def test_list_rent_official_success(client):
     r = client.get("/rent_stats_official/rent-stats", params={"area_code": "E08000035", "time_period": "2017-02"})
     assert r.status_code == 200
@@ -89,6 +91,44 @@ def test_rent_official_availability_area_not_found(client):
     assert r.status_code == 404
     err = r.json()
     assert "detail" in err
+
+def test_rent_map_summary_latest(client):
+    r = client.get("/rent_stats_official/map/summary")
+    assert r.status_code == 200, r.text
+    data = r.json()
+
+    assert data["resolved_time_period"] == "2017-06"
+    assert data["metric"] == "rental_price"
+    assert data["bedrooms"] == "overall"
+    assert data["min_time_period"] == "2017-02"
+    assert data["max_time_period"] == "2017-06"
+    assert data["item_count"] == 3
+    assert data["items"][0]["area_code"] == "E07000240"
+    assert data["items"][0]["area_name"] == "St Albans"
+    assert data["items"][0]["value"] == pytest.approx(1347.0)
+
+def test_rent_map_summary_custom_metric(client):
+    r = client.get(
+        "/rent_stats_official/map/summary",
+        params={"time_period": "2017-05", "metric": "index_value", "bedrooms": "2"},
+    )
+    assert r.status_code == 200, r.text
+    data = r.json()
+
+    assert data["resolved_time_period"] == "2017-05"
+    assert data["metric"] == "index_value"
+    assert data["bedrooms"] == "2"
+    assert data["item_count"] == 3
+    assert data["items"][0]["area_code"] == "E08000025"
+    assert data["items"][0]["value"] == pytest.approx(86.491647)
+
+def test_rent_map_summary_invalid_combo(client):
+    r = client.get(
+        "/rent_stats_official/map/summary",
+        params={"metric": "annual_change", "bedrooms": "2"},
+    )
+    assert r.status_code == 422
+    assert "detail" in r.json()
 
 def test_rent_official_trend_area_code(client):
     area_code = "E08000035"

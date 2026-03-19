@@ -50,10 +50,37 @@ def test_frontend_homepage_serves_index_html(client: TestClient):
 
     # key UI markers from your demo client
     assert "Housing API Demo Client" in text
+    assert "Open Rent Map Explorer" in text
+    assert "UK Rent Map and Trend Comparison" not in text
     assert "Official Sales Stats" in text
     assert "Official Sales Transactions" in text
     assert "Create Rent Record" in text
     assert "Manage Rent Records" in text
+
+
+def test_map_page_serves_map_html(client: TestClient):
+    resp = client.get("/map")
+    assert resp.status_code == 200
+    assert "text/html" in resp.headers.get("content-type", "")
+    text = resp.text
+
+    assert "UK Rent Map Explorer" in text
+    assert "UK Rent Map and Trend Comparison" in text
+    assert "Interactive UK Snapshot" in text
+    assert "Back to Demo Client" in text
+    assert 'data-geojson-path="/map/boundaries.geojson"' in text
+    assert 'id="rentMapZoomInBtn"' in text
+    assert 'id="rentMapResetViewBtn"' in text
+    assert 'id="rentMapViewport"' in text
+
+
+def test_map_boundaries_geojson_is_served(client: TestClient):
+    resp = client.get("/map/boundaries.geojson")
+    assert resp.status_code == 200
+    assert "json" in resp.headers.get("content-type", "")
+    body = resp.json()
+    assert body["type"] == "FeatureCollection"
+    assert len(body["features"]) > 0
 
 
 def test_static_js_is_served(client: TestClient):
@@ -62,6 +89,22 @@ def test_static_js_is_served(client: TestClient):
     assert "javascript" in resp.headers.get("content-type", "") or resp.text.strip() != ""
     assert "salesPointBtn" in resp.text
     assert "officialSalesByAreaBtn" in resp.text
+
+
+def test_static_map_js_is_served(client: TestClient):
+    resp = client.get("/static/map.js")
+    assert resp.status_code == 200
+    assert "javascript" in resp.headers.get("content-type", "") or resp.text.strip() != ""
+    assert "rentExplorerLoadBtn" in resp.text
+    assert "loadRentExplorerSummary" in resp.text
+    assert "LAD24CD" in resp.text
+    assert "detectBoundaryCoordinateMode" in resp.text
+    assert "BNG_E" in resp.text
+    assert "ensureBoundaryGeoJsonLoaded" in resp.text
+    assert "initialiseRentExplorerMapInteractions" in resp.text
+    assert "RENT_EXPLORER_LABEL_ZOOM_THRESHOLD" in resp.text
+    assert "rentMapZoomInBtn" in resp.text
+    assert "Multiple areas selected" in resp.text
 
 
 
