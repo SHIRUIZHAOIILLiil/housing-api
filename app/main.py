@@ -1,5 +1,5 @@
 import uvicorn
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
 from pathlib import Path
@@ -10,6 +10,16 @@ from app.schemas.errors import AppError
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 STATIC_DIR = BASE_DIR / "static"
+BOUNDARY_DATA_DIR = STATIC_DIR / "data"
+
+
+def find_boundary_geojson_path() -> Path:
+    candidates = sorted(BOUNDARY_DATA_DIR.glob("*.geojson")) or sorted(BOUNDARY_DATA_DIR.glob("*.json"))
+
+    if not candidates:
+        raise FileNotFoundError("No boundary GeoJSON file was found in static/data.")
+
+    return candidates[0]
 
 def create_app() -> FastAPI:
     app = FastAPI(
@@ -31,6 +41,19 @@ def create_app() -> FastAPI:
     @app.get("/", include_in_schema=False)
     def serve_frontend():
         return FileResponse(STATIC_DIR / "index.html")
+
+    @app.get("/map", include_in_schema=False)
+    def serve_map_frontend():
+        return FileResponse(STATIC_DIR / "map.html")
+
+    @app.get("/map/boundaries.geojson", include_in_schema=False)
+    def serve_map_boundaries():
+        try:
+            boundary_path = find_boundary_geojson_path()
+        except FileNotFoundError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+        return FileResponse(boundary_path, media_type="application/geo+json")
 
     @app.get("/chat-demo")
     def chat_demo_page():

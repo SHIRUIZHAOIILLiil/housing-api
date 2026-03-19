@@ -23,7 +23,10 @@ COMMON_ERROR_RESPONSES = {
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
 def get_conn() -> Generator[sqlite3.Connection, None, None]:
-    conn = sqlite3.connect(settings.DATABASE_DEMO) # For full use, change it as settings.DATABASE
+    # FastAPI may serve sync dependencies and handlers on different worker threads.
+    # Each request still gets its own connection, so disabling SQLite's same-thread
+    # guard avoids false-positive thread errors on concurrent frontend requests.
+    conn = sqlite3.connect(settings.DATABASE_DEMO, check_same_thread=False) # For full use, change it as settings.DATABASE
     conn.row_factory = sqlite3.Row
     try:
         yield conn

@@ -34,15 +34,34 @@ from app.services.service_rent_official import (get_rent_stats_official_one,
                                                 get_rent_stats_official_latest,
                                                 validate_yyyy_mm,
                                                 get_rent_stats_official_availability,
+                                                get_rent_map_summary,
                                                 build_rent_trend_png,)
 from app.services.service_area import area_exists
-from app.schemas.rent_stats_official import RentStatsOfficialOut, RentStatsAvailabilityOut
+from app.schemas.rent_stats_official import RentStatsOfficialOut, RentStatsAvailabilityOut, RentMapSummaryOut
 from app.schemas.errors import BadRequestError, NotFoundError, ErrorOut
 
 
 router = APIRouter()
 
 YYYY_MM = re.compile(r"^\d{4}-(0[1-9]|1[0-2])$")
+
+@router.get(
+    "/map/summary",
+    response_model=RentMapSummaryOut,
+    responses=COMMON_ERROR_RESPONSES,
+)
+def api_get_rent_map_summary(
+    time_period: Optional[str] = Query(None, description="Snapshot month (YYYY-MM). Defaults to latest available."),
+    metric: Literal["rental_price", "index_value", "annual_change"] = "rental_price",
+    bedrooms: Literal["overall", "1", "2", "3"] = "overall",
+    conn: sqlite3.Connection = Depends(get_conn),
+):
+    return get_rent_map_summary(
+        conn,
+        time_period=time_period,
+        metric=metric,
+        bedrooms=bedrooms,
+    )
 
 @router.get(
     "/rent-stats",

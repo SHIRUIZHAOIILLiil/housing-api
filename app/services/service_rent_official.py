@@ -23,7 +23,15 @@ import re
 import io
 import matplotlib.pyplot as plt
 from typing import Optional, List, Literal
-from app.schemas.rent_stats_official import RentStatsOfficialOut, BedStats, OverallStats, PropertyTypePrices, RentStatsAvailabilityOut
+from app.schemas.rent_stats_official import (
+    RentStatsOfficialOut,
+    BedStats,
+    OverallStats,
+    PropertyTypePrices,
+    RentStatsAvailabilityOut,
+    RentMapPointOut,
+    RentMapSummaryOut,
+)
 from app.schemas.errors import BadRequestError, NotFoundError, UnprocessableEntityError
 
 YYYY_MM_RE = re.compile(r"^\d{4}-(0[1-9]|1[0-2])$")
@@ -181,6 +189,80 @@ def get_rent_stats_official_availability(
         min_time_period=row["min_time_period"],
         max_time_period=row["max_time_period"],
         count=int(row["count"] or 0),
+    )
+
+
+def get_rent_map_summary(
+    conn: sqlite3.Connection,
+    time_period: Optional[str] = None,
+    metric: Metric = "rental_price",
+    bedrooms: Bedroom = "overall",
+) -> RentMapSummaryOut:
+    validate_yyyy_mm(time_period, "time_period")
+    col = _pick_column(metric, bedrooms)
+
+    availability = conn.execute(
+        """
+        SELECT
+            MIN(time_period) AS min_time_period,
+            MAX(time_period) AS max_time_period
+        FROM rent_stats_official
+        """
+    ).fetchone()
+
+    max_time_period = availability["max_time_period"] if availability else None
+    min_time_period = availability["min_time_period"] if availability else None
+
+    if max_time_period is None:
+        raise NotFoundError("No official rent data available")
+
+    resolved_time_period = time_period or max_time_period
+
+    rows = conn.execute(
+        f"""
+        SELECT
+            rs.area_code,
+            COALESCE(a.area_name, rs.area_code) AS area_name,
+            rs.region_or_country_name,
+            rs.time_period,
+            {col} AS value,
+            rs.rental_price,
+            rs.index_value,
+            rs.annual_change
+        FROM rent_stats_official AS rs
+        LEFT JOIN areas AS a
+            ON a.area_code = rs.area_code
+        WHERE rs.time_period = ?
+          AND {col} IS NOT NULL
+        ORDER BY value DESC, area_name ASC, rs.area_code ASC
+        """,
+        (resolved_time_period,),
+    ).fetchall()
+
+    if not rows:
+        raise NotFoundError("No rent map data available for the given inputs")
+
+    return RentMapSummaryOut(
+        requested_time_period=time_period,
+        resolved_time_period=resolved_time_period,
+        min_time_period=min_time_period,
+        max_time_period=max_time_period,
+        metric=metric,
+        bedrooms=bedrooms,
+        item_count=len(rows),
+        items=[
+            RentMapPointOut(
+                area_code=row["area_code"],
+                area_name=row["area_name"],
+                region_or_country_name=row["region_or_country_name"],
+                time_period=row["time_period"],
+                value=float(row["value"]),
+                rental_price=float(row["rental_price"]) if row["rental_price"] is not None else None,
+                index_value=float(row["index_value"]) if row["index_value"] is not None else None,
+                annual_change=float(row["annual_change"]) if row["annual_change"] is not None else None,
+            )
+            for row in rows
+        ],
     )
 
 

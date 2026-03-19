@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Optional
+from typing import Literal, Optional
 
 YYYY_MM = r"^\d{4}-(0[1-9]|1[0-2])$"
 
@@ -35,3 +35,25 @@ class RentStatsAvailabilityOut(BaseModel):
     min_time_period: Optional[str] = None
     max_time_period: Optional[str] = None
     count: int = 0
+
+
+class RentMapPointOut(BaseModel):
+    area_code: str
+    area_name: str
+    region_or_country_name: Optional[str] = None
+    time_period: str = Field(title="Time period", description="Time period", pattern=YYYY_MM)
+    value: float
+    rental_price: Optional[float] = None
+    index_value: Optional[float] = None
+    annual_change: Optional[float] = None
+
+
+class RentMapSummaryOut(BaseModel):
+    requested_time_period: Optional[str] = Field(default=None, pattern=YYYY_MM)
+    resolved_time_period: str = Field(pattern=YYYY_MM)
+    min_time_period: Optional[str] = Field(default=None, pattern=YYYY_MM)
+    max_time_period: Optional[str] = Field(default=None, pattern=YYYY_MM)
+    metric: Literal["rental_price", "index_value", "annual_change"]
+    bedrooms: Literal["overall", "1", "2", "3"]
+    item_count: int
+    items: list[RentMapPointOut]

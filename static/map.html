@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>UK Rent Map Explorer</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <header class="topbar topbar-shell">
+    <div>
+      <h1>UK Rent Map Explorer</h1>
+      <p>Standalone map page for official UK rental snapshots and multi-area trend comparison</p>
+    </div>
+    <div class="topbar-actions">
+      <a class="nav-link-btn" href="/">Back to Demo Client</a>
+    </div>
+  </header>
+
+  <main class="page">
+    <section class="panel compact-connection">
+      <div>
+        <h2>Connection</h2>
+        <p>Set the API base URL used by this standalone map page. It shares the same local setting as the main demo client.</p>
+      </div>
+
+      <div class="compact-connection-fields">
+        <div class="explorer-field">
+          <label for="mapBaseUrl">API Base URL</label>
+          <input id="mapBaseUrl" type="text" placeholder="e.g. http://127.0.0.1:8000" />
+        </div>
+        <div class="compact-connection-actions">
+          <button id="mapSaveConfigBtn" type="button">Save Base URL</button>
+          <button id="rentExplorerLoadBtn" type="button" class="secondary-btn">Refresh Map</button>
+          <button id="rentExplorerResetBtn" type="button" class="secondary-btn">Reset Explorer</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="explorer-section">
+      <div class="explorer-hero">
+        <div>
+          <p class="explorer-eyebrow">Official Rental Explorer</p>
+          <h2>UK Rent Map and Trend Comparison</h2>
+          <p>Use your official rent statistics API to inspect a national snapshot, then compare multi-year price trends across selected areas.</p>
+        </div>
+      </div>
+
+      <div class="explorer-toolbar">
+        <div class="explorer-field">
+          <label for="rentExplorerTimePeriod">Snapshot Month</label>
+          <input id="rentExplorerTimePeriod" type="text" placeholder="latest or e.g. 2024-01" />
+        </div>
+
+        <div class="explorer-field">
+          <label for="rentExplorerMetric">Metric</label>
+          <select id="rentExplorerMetric">
+            <option value="rental_price">rental_price</option>
+            <option value="index_value">index_value</option>
+            <option value="annual_change">annual_change</option>
+          </select>
+        </div>
+
+        <div class="explorer-field">
+          <label for="rentExplorerBedrooms">Bedrooms</label>
+          <select id="rentExplorerBedrooms">
+            <option value="overall">overall</option>
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+          </select>
+        </div>
+
+        <div class="explorer-field">
+          <label for="rentExplorerFrom">Trend From</label>
+          <input id="rentExplorerFrom" type="text" placeholder="e.g. 2020-01" />
+        </div>
+
+        <div class="explorer-field">
+          <label for="rentExplorerTo">Trend To</label>
+          <input id="rentExplorerTo" type="text" placeholder="e.g. 2024-12" />
+        </div>
+
+        <div class="explorer-field explorer-field-action">
+          <label for="rentExplorerApplyTrendBtn">Trend Filters</label>
+          <button id="rentExplorerApplyTrendBtn" type="button" class="secondary-btn">Update Trends</button>
+        </div>
+
+        <div class="explorer-field explorer-field-wide">
+          <label for="rentExplorerAreaSearch">Add Area to Compare</label>
+          <input id="rentExplorerAreaSearch" type="text" placeholder="Search by area name or code" />
+        </div>
+      </div>
+
+      <div id="rentExplorerSearchResults" class="explorer-search-results"></div>
+
+      <div class="explorer-grid">
+        <section class="panel explorer-card">
+          <div class="explorer-card-header">
+            <div>
+              <h3>Interactive UK Snapshot</h3>
+              <p id="rentExplorerSnapshotMeta">Loading official rent data...</p>
+            </div>
+            <div id="rentMapLegend" class="map-legend"></div>
+          </div>
+
+          <div class="map-stage">
+            <div class="map-stage-toolbar" aria-hidden="true">
+              <div class="map-controls">
+                <button id="rentMapZoomInBtn" type="button" class="map-control-btn" aria-label="Zoom in">+</button>
+                <button id="rentMapZoomOutBtn" type="button" class="map-control-btn" aria-label="Zoom out">-</button>
+                <button id="rentMapResetViewBtn" type="button" class="map-control-btn map-control-btn-wide">Reset</button>
+              </div>
+              <div id="rentMapZoomStatus" class="map-zoom-status">100%</div>
+            </div>
+            <svg
+              id="rentMapSvg"
+              viewBox="0 0 760 620"
+              role="img"
+              aria-label="UK rent map"
+              data-geojson-path="/map/boundaries.geojson"
+            >
+              <defs>
+                <linearGradient id="mapSeaGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#dbeafe" />
+                  <stop offset="100%" stop-color="#eff6ff" />
+                </linearGradient>
+              </defs>
+
+              <rect x="0" y="0" width="760" height="620" rx="28" fill="url(#mapSeaGradient)"></rect>
+              <g id="rentMapViewport">
+                <g id="rentMapRegions"></g>
+              </g>
+              <g id="rentMapRegionLabels"></g>
+            </svg>
+          </div>
+          <p id="rentMapInteractionHint" class="map-interaction-hint">
+            Drag to pan and use the controls or mouse wheel to zoom. Area names appear after zooming in.
+          </p>
+
+          <div id="rentMapFocus" class="map-focus">
+            <div class="empty-state">Hover over an area or select a district to inspect its latest snapshot value.</div>
+          </div>
+        </section>
+
+        <section class="panel explorer-card">
+          <div class="explorer-card-header">
+            <div>
+              <h3>Area Trend Comparison</h3>
+              <p>Click up to 4 districts or use search to compare official rent trends.</p>
+            </div>
+            <div id="rentExplorerSelectionMeta" class="selection-meta">0 / 4 selected</div>
+          </div>
+
+          <div id="rentExplorerSelection" class="selection-chips"></div>
+          <div id="rentTrendModeNote" class="trend-mode-note"></div>
+          <div id="rentTrendChart" class="trend-chart">
+            <div class="empty-state">Select one or more areas to render their rent trends.</div>
+          </div>
+          <div id="rentTrendStats" class="trend-stats"></div>
+        </section>
+      </div>
+
+      <div id="rentExplorerMessage" class="explorer-message info">
+        This standalone page uses the API base URL configured above.
+      </div>
+    </section>
+  </main>
+
+  <script src="/static/map.js"></script>
+</body>
+</html>
