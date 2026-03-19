@@ -55,8 +55,9 @@ The repository is organised into application code, data assets, tests, and suppo
 ```text
 housing-api/
 ├── app/
-│   ├── api/            # API dependencies and shared request handling utilities
-│   ├── routers/        # FastAPI route definitions grouped by resource
+│   ├── api/
+│   │   ├── deps.py     # API dependencies and shared request handling utilities
+│   │   └── routers/    # FastAPI route definitions grouped by resource
 │   ├── services/       # Business logic and database query functions
 │   ├── schemas/        # Pydantic request/response models
 │   ├── core/           # Configuration, authentication, and shared utilities
@@ -66,7 +67,7 @@ housing-api/
 ├── tests/              # Automated pytest test suite
 ├── scripts/            # Database initialisation and utility scripts
 ├── docs/               # Additional project documentation
-├── static/             # Frontend documentation
+├── static/             # Frontend pages, JavaScript, CSS, and map boundary assets
 ├── logs/               # Application or audit logs
 ├── openapi.json        # Exported OpenAPI specification
 ├── README.md           # Project overview and usage guide
@@ -84,7 +85,7 @@ Set the required environment variables before running the API:
 ```bash
 export JWT_SECRET=your_secret_key
 export HOST=127.0.0.1
-export PORT=8000
+export PORT=4444
 ```
 
 If you want to use full dataset of the system, set environment variables:
@@ -93,6 +94,28 @@ export DATAPATH=/path/to/your/data
 ```
 By default, the project uses the demo SQLite database. In config.py, both DATABASE and DATABASE_DEMO are defined, 
 and get_conn() in deps.py is currently configured to connect to settings.DATABASE_DEMO. The demo database is intended for lightweight local testing and coursework demonstration, while the full database can be generated from raw source files when needed.
+
+### Switching between demo and full databases
+
+The project currently defaults to the demo database for both the FastAPI app and the MCP server.
+
+- FastAPI request handlers use `settings.DATABASE_DEMO` in `app/api/deps.py`
+- MCP tools use `settings.DATABASE_DEMO` in `app/mcp_server/server.py`
+
+If you want to run against the full database instead of the demo database:
+
+1. Make sure your full SQLite file exists at the path configured by `settings.DATABASE`, or update the path in your environment/configuration.
+2. Change the database connection target from `settings.DATABASE_DEMO` to `settings.DATABASE` in:
+   - `app/api/deps.py`
+   - `app/mcp_server/server.py`
+3. Restart the FastAPI server and the MCP server after switching.
+
+If you switch between compatible database files while keeping the same schema, the frontend routes and API routes should continue to work. The `/map` page will automatically reflect the new data after a refresh, provided that:
+
+- `rent_stats_official.area_code` matches the boundary GeoJSON codes
+- the selected database contains valid `time_period` values in `YYYY-MM` format
+
+For the administrative-boundary map, place a LAD boundary GeoJSON file in `static/data/`. The `/map/boundaries.geojson` route serves the first `.geojson` or `.json` file found in that directory.
 
 
 On Windows, use set in Command Prompt or $env:VARIABLE_NAME="value" in PowerShell instead of export.
@@ -105,10 +128,12 @@ Start the development server with:
 uvicorn app.main:app --reload
 ```
 By default, the API will be available at:
-- http://127.0.0.1:8000 for the frontend view
-- http://127.0.0.1:8000/docs for the interactive Swagger UI
-- http://127.0.0.1:8000/redoc for the ReDoc interface
-- **MCP needs to be loaded at another port:** http://127.0.0.1:8888/mcp for the mcp URL
+- http://127.0.0.1:4444/ for the main frontend page
+- http://127.0.0.1:4444/map for the standalone UK rent map explorer
+- http://127.0.0.1:4444/chat-demo for the chat demo page
+- http://127.0.0.1:4444/docs for the interactive Swagger UI
+- http://127.0.0.1:4444/redoc for the ReDoc interface
+- **MCP needs to be loaded at another port:** http://127.0.0.1:8888/mcp for the MCP URL
 
 If you change HOST or PORT in your environment variables, use the corresponding address when accessing the API documentation.
 ## 7. Frontend and MCP Access
@@ -117,8 +142,17 @@ In addition to the REST API, the project also includes:
 - an MCP-compatible interface for tool-based access to selected backend capabilities.
 
 These layers sit on top of the same backend services and reuse the existing API logic rather than duplicating business functionality.
+
+Available frontend routes include:
+- `/` for the main landing page
+- `/map` for the standalone administrative-boundary rent explorer
+- `/map/boundaries.geojson` for the boundary GeoJSON file served to the map page
+- `/chat-demo` for the chat demo interface
+
 ### Inspect the MCP server locally
-```npx @modelcontextprotocol/inspector python -m app.mcp.server``` 
+```bash
+npx @modelcontextprotocol/inspector python -m app.mcp_server.server
+``` 
 ## 8. Deployment
 The API is deployed on Render and can be accessed online at:
 ```
@@ -148,6 +182,7 @@ Reference endpoints for geographic lookup and postcode-to-area mapping.
 Read-oriented endpoints for querying official rental statistics by area, postcode, time period, and related filters, including trend visualisation by area or area name.
 
 - `GET /rent_stats_official/rent-stats`
+- `GET /rent_stats_official/map/summary`
 - `GET /rent_stats_official/areas/{area_code}/rent-stats`
 - `GET /rent_stats_official/areas/{area_code}/rent-stats/latest`
 - `GET /rent_stats_official/areas/{area_code}/rent-stats/availability`
@@ -195,6 +230,12 @@ Authentication endpoints for user registration and login, used to obtain bearer 
 
 - `POST /auth/register`
 - `POST /auth/login`
+
+### 9.7 Chat
+
+Natural-language helper endpoint for lightweight postcode, area, rent, and sales lookups via the backend chat service.
+
+- `POST /chat/ask`
 ## 10. Usage
 
 After starting the API locally or opening the deployed version, the easiest way to explore and test the service is through the interactive Swagger UI available at `/docs`.
@@ -221,21 +262,33 @@ The public official-data endpoints can be queried without authentication, while 
   - URL: https://www.ons.gov.uk/economy/inflationandpriceindices/datasets/priceindexofprivaterentsukmonthlypricestatistics
 - National Statistics Postcode Lookup
   - URL: https://geoportal.statistics.gov.uk/datasets/8a1d5b58df824b2e86fe07ddfdd87165/about 
+- UK Map: Local Authority Districts
+  - URL: https://www.data.gov.uk/dataset/af158609-c1ec-40a6-a8ee-0b0feb698463/local-authority-districts-december-2024-boundaries-uk-bgc 
 ## 12. Testing
 
-The project includes an automated test suite built with `pytest` to verify core API behaviour, validation logic, and error handling.
+The project includes an automated test suite built with `pytest` and FastAPI `TestClient` to verify core API behaviour, validation logic, frontend route contracts, and error handling.
 
 To run the tests locally:
 
 ```bash
 pytest
 ```
+
+To generate a local coverage report:
+
+```bash
+pytest --cov=app --cov-report=term-missing
+```
+
 The test suite covers representative behaviours across the API, including:
-successful requests to public read-only endpoints
-validation of query parameters and path parameters
-missing-resource behaviour such as 404 Not Found
-invalid input cases such as 422 Unprocessable Entity
-authenticated write operations for user-managed resources
+- successful requests to public read-only endpoints
+- validation of query parameters and path parameters
+- missing-resource behaviour such as 404 Not Found
+- invalid input cases such as 400 Bad Request and 422 Unprocessable Entity
+- authenticated write operations for user-managed resources
+- chat endpoint branching and error paths
+- map explorer API consistency and database-switching compatibility
+
 Testing was used not only to check correctness, but also to improve consistency across endpoints, especially for validation, response codes, and protected operations.
 ## 13. Limitations and Future Work
 
@@ -258,10 +311,10 @@ Examples of exported conversation logs are provided as supplementary material in
 
 All generated suggestions were reviewed, tested and integrated manually.
 ## 15. API documentation PDF Reference
-- Machine-readable OpenAPI specification: ```/docs/openapi_v2.json```
+- Machine-readable OpenAPI specification: ```/docs/openapi-v3-current.json```
 - Human-readable API documentation PDF: ```/docs/Housing-API.pdf```
 ## 16. Technical Report and Presentation Slide
-- Technical Report: ```/docs/Housing-API-technical-report```
+- Technical Report: ```/docs/Housing-API-technical-report.pdf```
 - Slides: ```/docs/Housing-API-slides.pdf``` or ```/docs/Housing-API.pptx```
 
 ## 17. Author
