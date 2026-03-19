@@ -26,7 +26,7 @@ Notes
 
 import sqlite3
 import re
-from fastapi import APIRouter, Depends, Query, Response
+from fastapi import APIRouter, Depends, Query, Response, Path
 from typing import Optional, Literal
 from app.api.deps import get_conn, COMMON_ERROR_RESPONSES
 from app.services.service_rent_official import (get_rent_stats_official_one,
@@ -48,10 +48,12 @@ YYYY_MM = re.compile(r"^\d{4}-(0[1-9]|1[0-2])$")
 @router.get(
     "/map/summary",
     response_model=RentMapSummaryOut,
+    summary="Load a rent map snapshot",
+    description="Return one monthly snapshot of official rent values across all available areas. This endpoint powers the standalone /map page.",
     responses=COMMON_ERROR_RESPONSES,
 )
 def api_get_rent_map_summary(
-    time_period: Optional[str] = Query(None, description="Snapshot month (YYYY-MM). Defaults to latest available."),
+    time_period: Optional[str] = Query(None, description="Snapshot month (YYYY-MM). Defaults to latest available.", examples=["2017-06"]),
     metric: Literal["rental_price", "index_value", "annual_change"] = "rental_price",
     bedrooms: Literal["overall", "1", "2", "3"] = "overall",
     conn: sqlite3.Connection = Depends(get_conn),
@@ -65,10 +67,14 @@ def api_get_rent_map_summary(
 
 @router.get(
     "/rent-stats",
-    response_model=RentStatsOfficialOut, responses=COMMON_ERROR_RESPONSES )
+    response_model=RentStatsOfficialOut,
+    summary="Get one official rent point",
+    description="Return one official rent-statistics observation for a single area and month.",
+    responses=COMMON_ERROR_RESPONSES,
+)
 def api_get_rent_stats(
-    area_code: str,
-    time_period: str,
+    area_code: str = Query(..., description="Administrative area code.", examples=["E08000035"]),
+    time_period: str = Query(..., description="Monthly observation period in YYYY-MM format.", examples=["2017-06"]),
     conn: sqlite3.Connection = Depends(get_conn),
 ):
     if not area_exists(conn, area_code):
@@ -85,11 +91,15 @@ def api_get_rent_stats(
 
 @router.get(
     "/areas/{area_code}/rent-stats",
-    response_model=list[RentStatsOfficialOut], responses=COMMON_ERROR_RESPONSES )
+    response_model=list[RentStatsOfficialOut],
+    summary="Get an official rent series",
+    description="Return the official rent-statistics time series for one area, optionally constrained by a month range.",
+    responses=COMMON_ERROR_RESPONSES,
+)
 def api_get_rent_stats_series(
-    area_code: str,
-    from_: Optional[str] = Query(None, alias="from", description="Start time period (YYYY-MM)"),
-    to: Optional[str] = Query(None, description="End time period (YYYY-MM)"),
+    area_code: str = Path(..., description="Administrative area code.", examples=["E08000035"]),
+    from_: Optional[str] = Query(None, alias="from", description="Start time period (YYYY-MM).", examples=["2017-02"]),
+    to: Optional[str] = Query(None, description="End time period (YYYY-MM).", examples=["2017-06"]),
     conn: sqlite3.Connection = Depends(get_conn),
 ):
     # 404: area not exists
@@ -110,13 +120,15 @@ def api_get_rent_stats_series(
 @router.get(
     "/areas/{area_code}/rent-stats/latest",
     response_model=RentStatsOfficialOut,
+    summary="Get the latest official rent point",
+    description="Return the most recent official rent-statistics observation for one area.",
     responses={
         **COMMON_ERROR_RESPONSES,
         404: {"model": ErrorOut, "description": "Area not found, or no rent stats available."},
     },
 )
 def api_get_rent_stats_latest(
-    area_code: str,
+    area_code: str = Path(..., description="Administrative area code.", examples=["E08000035"]),
     conn: sqlite3.Connection = Depends(get_conn),
 ):
     if not area_exists(conn, area_code):
@@ -133,13 +145,15 @@ def api_get_rent_stats_latest(
 @router.get(
     "/areas/{area_code}/rent-stats/availability",
     response_model=RentStatsAvailabilityOut,
+    summary="Get rent-series availability",
+    description="Return the earliest and latest available official rent months for one area.",
     responses={
         **COMMON_ERROR_RESPONSES,
         404: {"model": ErrorOut, "description": "Area not found."},
     },
 )
 def api_get_rent_stats_availability(
-    area_code: str,
+    area_code: str = Path(..., description="Administrative area code.", examples=["E08000035"]),
     conn: sqlite3.Connection = Depends(get_conn),
 ):
     if not area_exists(conn, area_code):
@@ -150,12 +164,14 @@ def api_get_rent_stats_availability(
 
 @router.get("/areas/{area_code}/rent-trend.png",
             response_class=Response,
+            summary="Render a rent trend PNG",
+            description="Render a server-side PNG chart for one area's official rent series.",
             responses={200: {"content": {"image/png": {}}, "description": "PNG image"}, **COMMON_ERROR_RESPONSES,},
             )
 def api_get_rent_trend_plot(
-    area_code: str,
-    from_: Optional[str] = Query(None, alias="from", description="Start time period (YYYY-MM)"),
-    to: Optional[str] = Query(None, description="End time period (YYYY-MM)"),
+    area_code: str = Path(..., description="Administrative area code.", examples=["E08000035"]),
+    from_: Optional[str] = Query(None, alias="from", description="Start time period (YYYY-MM).", examples=["2017-02"]),
+    to: Optional[str] = Query(None, description="End time period (YYYY-MM).", examples=["2017-06"]),
     metric: Literal["rental_price", "index_value", "annual_change"] = "rental_price",
     bedrooms: Literal["overall", "1", "2", "3"] = "overall",
     conn: sqlite3.Connection = Depends(get_conn),
@@ -173,11 +189,13 @@ def api_get_rent_trend_plot(
 
 @router.get("/areas/rent-trend.png",
             response_class=Response,
+            summary="Render a rent trend PNG by area name",
+            description="Render a server-side PNG chart where the area is selected by a fuzzy area name query.",
             responses={200: {"content": {"image/png": {}}, "description": "PNG image"}, **COMMON_ERROR_RESPONSES,},)
 def api_rent_trend_by_name(
-    area: str = Query(..., description="Area name, e.g. Leeds"),
-    from_: Optional[str] = Query(None, alias="from", description="Start time period (YYYY-MM)"),
-    to: Optional[str] = Query(None, description="End time period (YYYY-MM)"),
+    area: str = Query(..., description="Area name, e.g. Leeds.", examples=["Leeds"]),
+    from_: Optional[str] = Query(None, alias="from", description="Start time period (YYYY-MM).", examples=["2017-02"]),
+    to: Optional[str] = Query(None, description="End time period (YYYY-MM).", examples=["2017-06"]),
     metric: Literal["rental_price", "index_value", "annual_change"] = "rental_price",
     bedrooms: Literal["overall", "1", "2", "3"] = "overall",
     conn: sqlite3.Connection = Depends(get_conn),

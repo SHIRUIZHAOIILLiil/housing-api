@@ -28,9 +28,9 @@ from __future__ import annotations
 
 import sqlite3
 from typing import Optional
-from fastapi import APIRouter, Depends, Response, status, Query, Request
+from fastapi import APIRouter, Depends, Response, status, Query, Request, Path
 
-from app.api.deps import get_conn, COMMON_ERROR_RESPONSES, get_current_user
+from app.api.deps import get_conn, AUTH_ERROR_RESPONSES, COMMON_ERROR_RESPONSES, get_current_user
 from app.schemas import (
     SalesUserCreate,
     SalesUserOut,
@@ -54,7 +54,9 @@ router = APIRouter()
     "",
     response_model=SalesUserOut,
     status_code=status.HTTP_201_CREATED,
-    responses=COMMON_ERROR_RESPONSES
+    summary="Create a user sales record",
+    description="Create a new user-contributed sales transaction. Requires bearer authentication.",
+    responses=AUTH_ERROR_RESPONSES
 )
 def api_create_user_sale(payload: SalesUserCreate, request: Request, conn: sqlite3.Connection = Depends(get_conn), user: UserOut = Depends(get_current_user)):
     request_id = getattr(request.state, "request_id", None)
@@ -64,27 +66,34 @@ def api_create_user_sale(payload: SalesUserCreate, request: Request, conn: sqlit
 @router.get(
     "/{record_id}",
     response_model=SalesUserOut,
+    summary="Get one user sales record",
+    description="Return a single user-contributed sales record by its numeric record_id.",
     responses=COMMON_ERROR_RESPONSES
 )
-def api_get_user_sale(record_id: int, conn: sqlite3.Connection = Depends(get_conn)):
+def api_get_user_sale(
+    record_id: int = Path(..., description="Numeric id of the user sales record.", examples=[7]),
+    conn: sqlite3.Connection = Depends(get_conn),
+):
     return get_user_sale(conn, record_id)
 
 
 @router.get(
     "",
     response_model=SalesUserListOut,
+    summary="List user sales records",
+    description="List user-contributed sales transactions with optional filters and pagination.",
     responses=COMMON_ERROR_RESPONSES
 )
 def api_list_user_sales(
-    postcode: Optional[str] = None,
-    area_code: Optional[str] = None,
-    from_period: Optional[str] = None,
-    to_period: Optional[str] = None,
-    property_type: Optional[str] = None,
-    min_price: Optional[float] = None,
-    max_price: Optional[float] = None,
-    limit: int = Query(default=50, ge=1, le=200),
-    offset: int = Query(default=0, ge=0),
+    postcode: Optional[str] = Query(default=None, description="Filter by postcode.", examples=["LS29JT"]),
+    area_code: Optional[str] = Query(default=None, description="Filter by administrative area code.", examples=["E08000035"]),
+    from_period: Optional[str] = Query(default=None, description="Filter from month in YYYY-MM format.", examples=["2025-01"]),
+    to_period: Optional[str] = Query(default=None, description="Filter to month in YYYY-MM format.", examples=["2025-12"]),
+    property_type: Optional[str] = Query(default=None, description="Filter by property type.", examples=["semidetached"]),
+    min_price: Optional[float] = Query(default=None, description="Minimum price filter.", examples=[100000]),
+    max_price: Optional[float] = Query(default=None, description="Maximum price filter.", examples=[500000]),
+    limit: int = Query(default=50, ge=1, le=200, description="Maximum number of rows to return.", examples=[50]),
+    offset: int = Query(default=0, ge=0, description="Number of rows to skip before returning results.", examples=[0]),
     conn: sqlite3.Connection = Depends(get_conn),
 ):
     items = list_user_sales(
@@ -104,12 +113,14 @@ def api_list_user_sales(
 @router.put(
     "/{record_id}",
     response_model=SalesUserOut,
-    responses=COMMON_ERROR_RESPONSES
+    summary="Replace a user sales record",
+    description="Fully replace an existing user-contributed sales record. Requires bearer authentication.",
+    responses=AUTH_ERROR_RESPONSES
 )
 def api_put_user_sale(
-    record_id: int,
     request: Request,
     payload: SalesUserCreate,
+    record_id: int = Path(..., description="Numeric id of the user sales record.", examples=[7]),
     conn: sqlite3.Connection = Depends(get_conn),
     user: UserOut = Depends(get_current_user)
 ):
@@ -120,12 +131,14 @@ def api_put_user_sale(
 @router.patch(
     "/{record_id}",
     response_model=SalesUserOut,
-    responses=COMMON_ERROR_RESPONSES
+    summary="Patch a user sales record",
+    description="Partially update an existing user-contributed sales record. Requires bearer authentication.",
+    responses=AUTH_ERROR_RESPONSES
 )
 def api_patch_user_sale(
-    record_id: int,
     request: Request,
     patch: SalesUserPatch,
+    record_id: int = Path(..., description="Numeric id of the user sales record.", examples=[7]),
     conn: sqlite3.Connection = Depends(get_conn),
     user: UserOut = Depends(get_current_user)
 ):
@@ -136,9 +149,16 @@ def api_patch_user_sale(
 @router.delete(
     "/{record_id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    responses=COMMON_ERROR_RESPONSES
+    summary="Delete a user sales record",
+    description="Delete an existing user-contributed sales record. Requires bearer authentication.",
+    responses=AUTH_ERROR_RESPONSES
 )
-def api_delete_user_sale(record_id: int, request: Request, conn: sqlite3.Connection = Depends(get_conn), user: UserOut = Depends(get_current_user)):
+def api_delete_user_sale(
+    request: Request,
+    record_id: int = Path(..., description="Numeric id of the user sales record.", examples=[7]),
+    conn: sqlite3.Connection = Depends(get_conn),
+    user: UserOut = Depends(get_current_user),
+):
     request_id = getattr(request.state, "request_id", None)
     delete_user_sale(conn, record_id, user, request_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

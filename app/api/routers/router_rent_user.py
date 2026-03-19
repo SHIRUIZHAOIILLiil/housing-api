@@ -26,11 +26,11 @@ Notes
 """
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Response, status, Query, Request
+from fastapi import APIRouter, Depends, Response, status, Query, Request, Path
 import sqlite3
 from typing import Optional
 
-from app.api.deps import get_conn, COMMON_ERROR_RESPONSES, get_current_user
+from app.api.deps import get_conn, AUTH_ERROR_RESPONSES, COMMON_ERROR_RESPONSES, get_current_user
 from app.schemas import (
     RentalRecordCreate,
     RentalRecordUpdate,
@@ -55,7 +55,9 @@ router = APIRouter()
     "",
     response_model=RentalRecordOut,
     status_code=status.HTTP_201_CREATED,
-    responses=COMMON_ERROR_RESPONSES,
+    summary="Create a user rental record",
+    description="Create a new user-contributed rental record. Requires bearer authentication and stores uploader ownership.",
+    responses=AUTH_ERROR_RESPONSES,
 
 )
 def api_create_rental_record(payload: RentalRecordCreate,
@@ -70,25 +72,32 @@ def api_create_rental_record(payload: RentalRecordCreate,
 @router.get(
     "/{record_id}",
     response_model=RentalRecordOut,
+    summary="Get one user rental record",
+    description="Return a single user-contributed rental record by its numeric record_id.",
     responses=COMMON_ERROR_RESPONSES
 )
-def api_get_rental_record(record_id: int, conn: sqlite3.Connection = Depends(get_conn)):
+def api_get_rental_record(
+    record_id: int = Path(..., description="Numeric id of the rental record.", examples=[14]),
+    conn: sqlite3.Connection = Depends(get_conn),
+):
     return get_rental_record(conn, record_id)
 
 
 @router.get(
     "",
     response_model=RentalRecordListOut,
+    summary="List user rental records",
+    description="List user-contributed rental records with optional filters and basic pagination.",
     responses=COMMON_ERROR_RESPONSES
 )
 def api_list_rental_records(
-    time_period: Optional[str] = None,
-    area_code: Optional[str] = None,
-    postcode: Optional[str] = None,
-    bedrooms: Optional[int] = None,
-    property_type: Optional[str] = None,
-    limit: int = Query(50, ge=1, le=200),
-    offset: int = Query(0, ge=0),
+    time_period: Optional[str] = Query(default=None, description="Filter by month in YYYY-MM format.", examples=["2025-02"]),
+    area_code: Optional[str] = Query(default=None, description="Filter by administrative area code.", examples=["E08000035"]),
+    postcode: Optional[str] = Query(default=None, description="Filter by postcode.", examples=["LS29JT"]),
+    bedrooms: Optional[int] = Query(default=None, description="Filter by bedroom count.", examples=[2]),
+    property_type: Optional[str] = Query(default=None, description="Filter by property type.", examples=["flat"]),
+    limit: int = Query(50, ge=1, le=200, description="Maximum number of rows to return.", examples=[50]),
+    offset: int = Query(0, ge=0, description="Number of rows to skip before returning results.", examples=[0]),
     conn: sqlite3.Connection = Depends(get_conn),
 ):
     items = list_rental_records(
@@ -107,12 +116,14 @@ def api_list_rental_records(
 @router.put(
     "/{record_id}",
     response_model=RentalRecordOut,
-    responses=COMMON_ERROR_RESPONSES
+    summary="Replace a user rental record",
+    description="Fully replace an existing user-contributed rental record. Requires bearer authentication.",
+    responses=AUTH_ERROR_RESPONSES
 )
 def api_update_rental_record(
-    record_id: int,
     request: Request,
     patch: RentalRecordUpdate,
+    record_id: int = Path(..., description="Numeric id of the rental record.", examples=[14]),
     conn: sqlite3.Connection = Depends(get_conn),
     user: UserOut = Depends(get_current_user)
 ):
@@ -123,12 +134,14 @@ def api_update_rental_record(
 @router.patch(
     "/{record_id}",
     response_model=RentalRecordOut,
-    responses=COMMON_ERROR_RESPONSES
+    summary="Patch a user rental record",
+    description="Partially update an existing user-contributed rental record. Requires bearer authentication.",
+    responses=AUTH_ERROR_RESPONSES
 )
 def api_patch_rental_record(
-    record_id: int,
     request: Request,
     patch: RentalRecordPatch,
+    record_id: int = Path(..., description="Numeric id of the rental record.", examples=[14]),
     conn: sqlite3.Connection = Depends(get_conn),
     user: UserOut = Depends(get_current_user)
 ):
@@ -138,10 +151,12 @@ def api_patch_rental_record(
 @router.delete(
     "/{record_id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    responses=COMMON_ERROR_RESPONSES
+    summary="Delete a user rental record",
+    description="Delete an existing user-contributed rental record. Requires bearer authentication.",
+    responses=AUTH_ERROR_RESPONSES
 )
-def api_delete_rental_record(record_id: int,
-                             request: Request,
+def api_delete_rental_record(request: Request,
+                             record_id: int = Path(..., description="Numeric id of the rental record.", examples=[14]),
                              conn: sqlite3.Connection = Depends(get_conn),
                              user: UserOut = Depends(get_current_user)):
     request_id = getattr(request.state, "request_id", None)

@@ -16,8 +16,32 @@ from fastapi.security import OAuth2PasswordBearer
 settings = Settings()
 
 COMMON_ERROR_RESPONSES = {
-    400: {"model": ErrorOut, "description": "Invalid input."},
-    404: {"model": ErrorOut, "description": "Resource not found."},
+    400: {
+        "model": ErrorOut,
+        "description": "Invalid input.",
+        "content": {"application/json": {"example": {"detail": "Invalid input"}}},
+    },
+    404: {
+        "model": ErrorOut,
+        "description": "Resource not found.",
+        "content": {"application/json": {"example": {"detail": "Resource not found"}}},
+    },
+}
+
+AUTH_ERROR_RESPONSES = {
+    **COMMON_ERROR_RESPONSES,
+    401: {
+        "model": ErrorOut,
+        "description": "Authentication failed or bearer token missing.",
+        "content": {
+            "application/json": {
+                "examples": {
+                    "missing_token": {"summary": "Missing bearer token", "value": {"detail": "Not authenticated"}},
+                    "invalid_token": {"summary": "Invalid token", "value": {"detail": "Invalid token"}},
+                }
+            }
+        },
+    },
 }
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
@@ -35,20 +59,20 @@ def get_conn() -> Generator[sqlite3.Connection, None, None]:
 
 
 def get_sales_global_filters(
-    postcode_like: Optional[str] = Query(default=None, description="Fuzzy postcode (ignores spaces)"),
-    uuid_prefix: Optional[str] = Query(default=None, min_length=4, max_length=64, description="UUID prefix"),
-    date_from: Optional[date] = Query(default=None),
-    date_to: Optional[date] = Query(default=None),
-    min_price: Optional[int] = Query(default=None, ge=0),
-    max_price: Optional[int] = Query(default=None, ge=0),
-    property_type: Optional[PropertyType] = Query(default=None),
-    new_build: Optional[bool] = Query(default=None),
-    tenure: Optional[TenureType] = Query(default=None),
-    limit: int = Query(default=50, ge=1, le=200),
-    offset: int = Query(default=0, ge=0),
-    sort_by: SortBy = Query(default="transaction_date"),
-    order: SortOrder = Query(default="desc"),
-    include_total: bool = Query(default=False),
+    postcode_like: Optional[str] = Query(default=None, description="Fuzzy postcode (ignores spaces).", examples=["LS29"]),
+    uuid_prefix: Optional[str] = Query(default=None, min_length=4, max_length=64, description="Transaction UUID prefix.", examples=["44f4"]),
+    date_from: Optional[date] = Query(default=None, description="Start transaction date filter (YYYY-MM-DD).", examples=["2020-01-01"]),
+    date_to: Optional[date] = Query(default=None, description="End transaction date filter (YYYY-MM-DD).", examples=["2020-12-31"]),
+    min_price: Optional[int] = Query(default=None, ge=0, description="Minimum transaction price.", examples=[100000]),
+    max_price: Optional[int] = Query(default=None, ge=0, description="Maximum transaction price.", examples=[500000]),
+    property_type: Optional[PropertyType] = Query(default=None, description="Property type filter.", examples=["S"]),
+    new_build: Optional[bool] = Query(default=None, description="Filter for new-build transactions.", examples=[False]),
+    tenure: Optional[TenureType] = Query(default=None, description="Tenure filter.", examples=["F"]),
+    limit: int = Query(default=50, ge=1, le=200, description="Maximum number of rows to return.", examples=[50]),
+    offset: int = Query(default=0, ge=0, description="Number of rows to skip before returning results.", examples=[0]),
+    sort_by: SortBy = Query(default="transaction_date", description="Field used for result ordering.", examples=["transaction_date"]),
+    order: SortOrder = Query(default="desc", description="Sort direction.", examples=["desc"]),
+    include_total: bool = Query(default=False, description="Include total match count for pagination metadata.", examples=[True]),
 ) -> SalesGlobalFilters:
     if postcode_like:
         postcode_like = postcode_like.strip().upper().replace(" ", "")
@@ -72,18 +96,18 @@ def get_sales_global_filters(
     )
 
 def get_sales_scoped_filters(
-    date_from: Optional[date] = Query(default=None),
-    date_to: Optional[date] = Query(default=None),
-    min_price: Optional[int] = Query(default=None, ge=0),
-    max_price: Optional[int] = Query(default=None, ge=0),
-    property_type: Optional[PropertyType] = Query(default=None),
-    new_build: Optional[bool] = Query(default=None),
-    tenure: Optional[TenureType] = Query(default=None),
-    limit: int = Query(default=50, ge=1, le=200),
-    offset: int = Query(default=0, ge=0),
-    sort_by: SortBy = Query(default="transaction_date"),
-    order: SortOrder = Query(default="desc"),
-    include_total: bool = Query(default=False),
+    date_from: Optional[date] = Query(default=None, description="Start transaction date filter (YYYY-MM-DD).", examples=["2020-01-01"]),
+    date_to: Optional[date] = Query(default=None, description="End transaction date filter (YYYY-MM-DD).", examples=["2020-12-31"]),
+    min_price: Optional[int] = Query(default=None, ge=0, description="Minimum transaction price.", examples=[100000]),
+    max_price: Optional[int] = Query(default=None, ge=0, description="Maximum transaction price.", examples=[500000]),
+    property_type: Optional[PropertyType] = Query(default=None, description="Property type filter.", examples=["S"]),
+    new_build: Optional[bool] = Query(default=None, description="Filter for new-build transactions.", examples=[False]),
+    tenure: Optional[TenureType] = Query(default=None, description="Tenure filter.", examples=["F"]),
+    limit: int = Query(default=50, ge=1, le=200, description="Maximum number of rows to return.", examples=[50]),
+    offset: int = Query(default=0, ge=0, description="Number of rows to skip before returning results.", examples=[0]),
+    sort_by: SortBy = Query(default="transaction_date", description="Field used for result ordering.", examples=["transaction_date"]),
+    order: SortOrder = Query(default="desc", description="Sort direction.", examples=["desc"]),
+    include_total: bool = Query(default=False, description="Include total match count for pagination metadata.", examples=[True]),
 ) -> SalesScopedFilters:
     return SalesScopedFilters(
         date_from=date_from,

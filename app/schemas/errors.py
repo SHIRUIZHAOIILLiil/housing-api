@@ -1,7 +1,19 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 class ErrorOut(BaseModel):
-    detail: str
+    detail: str = Field(
+        ...,
+        description="Human-readable error message describing why the request failed.",
+        examples=["Area not found"],
+    )
+
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "detail": "Area not found",
+            }
+        }
+    }
 
 class AppError(Exception):
     status_code: int = 400

@@ -39,7 +39,7 @@ def _norm_query(q: Optional[str]) -> Optional[str]:
     return qq
 
 def get_postcode_map(conn: sqlite3.Connection, postcode:str):
-    postcode = postcode.strip().upper().replace(" ", "")
+    postcode = _norm_postcode(postcode)
     row = conn.execute(
         """
             select pm.postcode, pm.area_code, ac.area_name from postcode_map as pm join areas as ac
@@ -70,7 +70,9 @@ def get_postcode_map_by_area_code(conn: sqlite3.Connection, area_code:str, limit
 
 
 def get_postcode_fuzzy_query(conn: sqlite3.Connection, q: Optional[str], limit: int):
-    if q:
+    normalized_query = _norm_query(q)
+
+    if normalized_query:
         rows = conn.execute(
             """
             SELECT pm.postcode, pm.area_code, ac.area_name
@@ -78,7 +80,7 @@ def get_postcode_fuzzy_query(conn: sqlite3.Connection, q: Optional[str], limit: 
             on pm.area_code = ac.area_code
             where pm.postcode like ?
             LIMIT ?
-            """, (f"%{q}%", limit,),
+            """, (f"%{normalized_query}%", limit,),
         ).fetchall()
     else:
         rows = conn.execute(

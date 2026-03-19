@@ -19,7 +19,7 @@ Notes
 """
 
 import sqlite3
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Path
 from typing import Optional
 
 from app.api.deps import get_conn, COMMON_ERROR_RESPONSES
@@ -30,28 +30,46 @@ from app.schemas.postcode import PostcodeOut
 from app.schemas.errors import NotFoundError
 router = APIRouter()
 
-@router.get("", response_model=list[AreaOut], responses=COMMON_ERROR_RESPONSES)
+@router.get(
+    "",
+    response_model=list[AreaOut],
+    summary="List reference areas",
+    description="Return reference areas with optional fuzzy name matching and a configurable page size.",
+    responses=COMMON_ERROR_RESPONSES,
+)
 def api_list_areas(
-    q: Optional[str] = Query(default=None, description="Fuzzy search by area name"),
-    limit: int = Query(default=50, ge=1, le=200),
+    q: Optional[str] = Query(default=None, description="Fuzzy search by area name.", examples=["Leeds"]),
+    limit: int = Query(default=50, ge=1, le=200, description="Maximum number of areas to return.", examples=[50]),
     conn: sqlite3.Connection = Depends(get_conn),
 ):
     """List areas, with optional fuzzy search and pagination."""
     return list_areas(conn, q=q, limit=limit)
 
 
-@router.get("/{area_code}", response_model=AreaOut, responses=COMMON_ERROR_RESPONSES)
+@router.get(
+    "/{area_code}",
+    response_model=AreaOut,
+    summary="Get one reference area",
+    description="Return a single administrative area by its canonical area_code.",
+    responses=COMMON_ERROR_RESPONSES,
+)
 def api_get_area(
-    area_code: str,
+    area_code: str = Path(..., description="Administrative area code.", examples=["E08000035"]),
     conn: sqlite3.Connection = Depends(get_conn),
 ):
     """Retrieve a single area by area_code."""
     return get_area(conn, area_code)
 
-@router.get("/{area_code}/postcodes", response_model=list[PostcodeOut], responses=COMMON_ERROR_RESPONSES)
+@router.get(
+    "/{area_code}/postcodes",
+    response_model=list[PostcodeOut],
+    summary="List postcodes for an area",
+    description="Return postcode mappings associated with the supplied administrative area code.",
+    responses=COMMON_ERROR_RESPONSES,
+)
 def api_postcode(
-    area_code: str,
-    limit: int = Query(default=50, ge=1, le=200),
+    area_code: str = Path(..., description="Administrative area code.", examples=["E08000035"]),
+    limit: int = Query(default=50, ge=1, le=200, description="Maximum number of postcode rows to return.", examples=[50]),
     conn: sqlite3.Connection = Depends(get_conn),
 
 ):

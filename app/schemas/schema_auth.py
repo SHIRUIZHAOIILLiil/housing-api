@@ -40,15 +40,45 @@ class UserCreate(UserBase):
             raise ValueError("Password must contain a letter")
         return v
 
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "username": "shirui_zh",
+                "email": "s.zhao@example.com",
+                "password": "Str0ngPassw0rd!",
+            }
+        }
+    }
+
 
 class UserOut(UserBase):
-    id: int
-    created_at: str
+    id: int = Field(description="Internal numeric identifier of the registered user.", examples=[1])
+    created_at: str = Field(description="Timestamp recorded when the account was created.", examples=["2026-03-19T10:20:11"])
+
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "username": "shirui_zh",
+                "email": "s.zhao@example.com",
+                "id": 1,
+                "created_at": "2026-03-19T10:20:11",
+            }
+        }
+    }
 
 
 class TokenOut(BaseModel):
-    access_token: str = Field(..., description="JWT access token.")
-    token_type: str = Field("bearer", description="Token type, usually 'bearer'.")
+    access_token: str = Field(..., description="JWT access token.", examples=["eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."])
+    token_type: str = Field("bearer", description="Token type, usually 'bearer'.", examples=["bearer"])
+
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+                "token_type": "bearer",
+            }
+        }
+    }
 
 
 class LoginIn(BaseModel):

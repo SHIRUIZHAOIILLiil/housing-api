@@ -55,7 +55,7 @@ def create_app() -> FastAPI:
 
         return FileResponse(boundary_path, media_type="application/geo+json")
 
-    @app.get("/chat-demo")
+    @app.get("/chat-demo", include_in_schema=False)
     def chat_demo_page():
         return FileResponse(STATIC_DIR / "chat.html")
 

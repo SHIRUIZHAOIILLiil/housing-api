@@ -36,7 +36,7 @@ from __future__ import annotations
 import sqlite3
 from uuid import UUID
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Path, Query
 from app.api.deps import get_sales_global_filters, get_sales_scoped_filters , get_conn, COMMON_ERROR_RESPONSES
 
 from app.schemas.sales_official import (
@@ -147,6 +147,7 @@ def attach_transaction_links(item: list[dict]) -> None:
     "",
     response_model=PagedResponse[OfficialSalesTransactionOut],
     summary="List official sales transactions (supports search/filtering)",
+    description="Search official HM Land Registry transactions using postcode, UUID prefix, date, price, property, and tenure filters.",
     responses=COMMON_ERROR_RESPONSES
 )
 def api_list_official_sales_transactions(
@@ -174,10 +175,11 @@ def api_list_official_sales_transactions(
     "/transactions/{transaction_uuid}",
     response_model=OfficialSalesTransactionOut,
     summary="Get a specific sales transaction",
+    description="Return one official HM Land Registry transaction by transaction UUID.",
     responses=COMMON_ERROR_RESPONSES
 )
 def api_get_official_sales_transaction(
-    transaction_uuid: UUID,
+    transaction_uuid: UUID = Path(..., description="HM Land Registry transaction UUID.", examples=["44F406B7-3032-1095-E063-4704A8C048D4"]),
     conn: sqlite3.Connection = Depends(get_conn),
 ):
     item = get_official_sales_transaction_by_uuid(conn, str(transaction_uuid))  # service will throw NotFoundError
@@ -194,10 +196,11 @@ def api_get_official_sales_transaction(
     "/areas/{area_code}",
     response_model=PagedResponse[OfficialSalesTransactionOut],
     summary="List official sales transactions for a given area (supports filtering)",
+    description="Search official sales transactions restricted to a single administrative area.",
     responses=COMMON_ERROR_RESPONSES
 )
 def api_list_official_sales_by_area(
-    area_code: str,
+    area_code: str = Path(..., description="Administrative area code.", examples=["E08000035"]),
     filters: SalesScopedFilters = Depends(get_sales_scoped_filters),
     conn: sqlite3.Connection = Depends(get_conn),
 ):
@@ -218,10 +221,11 @@ def api_list_official_sales_by_area(
     "/postcodes/{postcode}",
     response_model=PagedResponse[OfficialSalesTransactionOut],
     summary="List official sales transactions for a given postcode (supports filtering)",
+    description="Search official sales transactions restricted to a single postcode.",
     responses=COMMON_ERROR_RESPONSES
 )
 def api_list_official_sales_by_postcode(
-    postcode: str,
+    postcode: str = Path(..., description="Postcode used to scope the transaction search.", examples=["LS29 8PB"]),
     filters: SalesScopedFilters = Depends(get_sales_scoped_filters),
     conn: sqlite3.Connection = Depends(get_conn),
 ):
@@ -242,11 +246,12 @@ def api_list_official_sales_by_postcode(
     "/sales-stats",
     response_model=SalesStatsOut,
     summary="Get aggregated official sales stats for an area and month",
+    description="Return one monthly aggregate sales snapshot for an area with optional property-level filters.",
     responses=COMMON_ERROR_RESPONSES
 )
 def api_get_official_sales_stats_point(
-    area_code: str,
-    time_period: str,
+    area_code: str = Query(..., description="Administrative area code.", examples=["E08000035"]),
+    time_period: str = Query(..., description="Monthly aggregation period in YYYY-MM format.", examples=["2020-08"]),
     filters: SalesStatsPointQuery = Depends(),
     conn: sqlite3.Connection = Depends(get_conn),
 ):
@@ -263,10 +268,11 @@ def api_get_official_sales_stats_point(
     "/areas/{area_code}/sales-stats",
     response_model=SalesStatsSeriesOut,
     summary="Get time-series of aggregated official sales stats for an area",
+    description="Return the monthly aggregate sales series for one area.",
     responses=COMMON_ERROR_RESPONSES
 )
 def api_get_official_sales_stats_series(
-    area_code: str,
+    area_code: str = Path(..., description="Administrative area code.", examples=["E08000035"]),
     filters: SalesStatsSeriesQuery = Depends(),
     conn: sqlite3.Connection = Depends(get_conn),
 ):
@@ -277,10 +283,11 @@ def api_get_official_sales_stats_series(
     "/areas/{area_code}/sales-stats/latest",
     response_model=SalesStatsOut,
     summary="Get latest available aggregated official sales stats for an area",
+    description="Return the latest available aggregated official sales statistics for one area.",
     responses=COMMON_ERROR_RESPONSES
 )
 def api_get_official_sales_stats_latest(
-    area_code: str,
+    area_code: str = Path(..., description="Administrative area code.", examples=["E08000035"]),
     filters: SalesStatsLatestQuery = Depends(),
     conn: sqlite3.Connection = Depends(get_conn),
 ):
@@ -298,10 +305,11 @@ def api_get_official_sales_stats_latest(
     "/areas/{area_code}/sales-stats/availability",
     response_model=SalesStatsAvailabilityOut,
     summary="Get min/max months available for official sales stats in an area",
+    description="Return the earliest and latest months available in the official sales aggregate table for one area.",
     responses=COMMON_ERROR_RESPONSES
 )
 def api_get_official_sales_stats_availability(
-    area_code: str,
+    area_code: str = Path(..., description="Administrative area code.", examples=["E08000035"]),
     conn: sqlite3.Connection = Depends(get_conn),
 ):
     result = get_official_sales_stats_availability(conn, area_code)
